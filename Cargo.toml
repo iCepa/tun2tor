@@ -1,0 +1,14 @@
+[package]
+name = "tun2tor"
+version = "0.1.0"
+authors = ["Conrad Kramer <conrad@kramerapps.com>"]
+
+[dependencies]
+mio = "0.4.*"
+block "0.1.*"
+
+[dependencies.socks]
+path = "socks"
+
+[dependencies.lwip]
+path = "lwip"

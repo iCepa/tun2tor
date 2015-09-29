@@ -1,0 +1,7 @@
+[package]
+name = "socks"
+version = "0.1.0"
+authors = ["Conrad Kramer <conrad@kramerapps.com>"]
+
+[dependencies]
+byteorder = "*"
