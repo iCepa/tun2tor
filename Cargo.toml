@@ -3,12 +3,13 @@ name = "tun2tor"
 version = "0.1.0"
 authors = ["Conrad Kramer <conrad@kramerapps.com>"]
 
+[lib]
+crate-type = ["staticlib"]
+
 [dependencies]
+libc = "0.1.*"
 mio = "0.4.*"
-block "0.1.*"
+byteorder = "0.3.*"
 
 [dependencies.socks]
 path = "socks"
-
-[dependencies.lwip]
-path = "lwip"
