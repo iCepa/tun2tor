@@ -39,10 +39,9 @@ impl FromBytes for Ipv6Addr {
 	}
 }
 
-#[repr(packed)]
 struct Ipv4Header {
 	version: u8,
-	hlen: u8,
+	hlen: usize,
 	tos: u8,
 	len: u16,
 	id: u16,
@@ -59,7 +58,7 @@ impl FromBytes for Ipv4Header {
 		let mut rdr = Cursor::new(packet);
 		let v_hl = rdr.read_u8().unwrap();
 		let tos = rdr.read_u8().unwrap();
-		let len = rdr.read_u16::<LittleEndian>().unwrap();
+		let len = rdr.read_u16::<BigEndian>().unwrap();
 		let id = rdr.read_u16::<LittleEndian>().unwrap();
 		let offset = rdr.read_u16::<LittleEndian>().unwrap();
 		let ttl = rdr.read_u8().unwrap();
@@ -72,7 +71,7 @@ impl FromBytes for Ipv4Header {
 
 		Ok(Ipv4Header {
 		    version: (v_hl >> 4),
-		    hlen: (v_hl & 0xFFFF),
+		    hlen: ((v_hl & 0xF) * 4) as usize,
 		    tos: tos,
 		    len: len,
 		    id: id,
@@ -86,7 +85,26 @@ impl FromBytes for Ipv4Header {
 	}
 }
 
-#[repr(packed)]
+impl Ipv4Header {
+	fn checksum_valid(&self) -> bool {
+		let src = self.src.octets();
+		let dest = self.dest.octets();
+		let sum = (((self.version as u32) << 4) | ((self.hlen / 4) as u32) | (self.tos as u32) << 16) +
+				  ((self.len >> 8 | self.len << 8) as u32) +
+				  self.id as u32 +
+				  self.offset as u32 +
+				  (self.ttl as u32 | (self.proto as u32) << 8) +
+				  (((src[1] as u32) << 8) | src[0] as u32) +
+  				  (((src[3] as u32) << 8) | src[2] as u32) +
+  				  (((dest[1] as u32) << 8) | dest[0] as u32) +
+				  (((dest[3] as u32) << 8) | dest[2] as u32);
+		let fold1 = (sum >> 16) + (sum & 0xFFFF);
+		let fold2 = (fold1 >> 16) + (fold1 & 0xFFFF);
+		let calculated = !(fold2 as u16);
+		(self.chksum == calculated)
+	}
+}
+
 struct Ipv6Header {
 	v_tc_fl: u32,
 	plen: u16,
@@ -153,7 +171,13 @@ impl TunIf {
 		};
 		match header {
 			Some(IpHeader::V4(header)) => {
-				println!("WOOHOO {:?}", header.src);
+				if header.hlen > packet.len() {
+					return println!("IP header length is greater than total packet length, packet dropped");
+				}
+				if header.checksum_valid() == false {
+					return println!("IP header checksum is invalid, packet dropped");
+				}
+
 			},
 			Some(IpHeader::V6(header)) => {
 				println!("WOOHOO {:?}", header.src);
