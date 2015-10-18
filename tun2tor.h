@@ -6,9 +6,9 @@
 //
 
 #ifdef __cplusplus
-#define T2T_EXTERN		extern "C" __attribute__((visibility ("default")))
+#define T2T_EXTERN      extern "C" __attribute__((visibility ("default")))
 #else
-#define T2T_EXTERN       extern __attribute__((visibility ("default")))
+#define T2T_EXTERN      extern __attribute__((visibility ("default")))
 #endif
 
 struct _tunif;
