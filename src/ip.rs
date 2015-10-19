@@ -154,15 +154,16 @@ impl FromBytes for Ipv4Header {
 }
 
 impl Ipv4Header {
-    pub fn pseudo_sum(&self, length: u16) -> u16 {
+    pub fn pseudo_checksum<T: Iterator<Item=u16>>(&self, length: u16, data_iter: T) -> u16 {
         let src = self.src.octets();
         let dest = self.dest.octets();
-        [(length >> 8) as u8, length as u8, 
-         0, self.proto.value(),
-         src[0], src[1],
-         src[2], src[3],
-         dest[0], dest[1],
-         dest[2], dest[3]].pair_iter().checksum()
+        let bytes = [(length >> 8) as u8, length as u8, 
+                     0, self.proto.value(),
+                     src[0], src[1],
+                     src[2], src[3],
+                     dest[0], dest[1],
+                     dest[2], dest[3]];
+        bytes.pair_iter().chain(data_iter).checksum()
     }
 
     pub fn checksum_valid(&self) -> bool {
@@ -177,7 +178,7 @@ impl Ipv4Header {
                      src[2], src[3],
                      dest[0], dest[1],
                      dest[2], dest[3]];
-        (self.chksum == !bytes.pair_iter().checksum())
+        (self.chksum == bytes.pair_iter().checksum())
     }
 }
 
@@ -240,6 +241,22 @@ impl FromBytes for IpHeader {
     }
 }
 
+trait Checksum {
+    fn checksum(&mut self) -> u16;
+}
+
+impl<T> Checksum for T where T: Iterator<Item=u16> {
+    fn checksum(&mut self) -> u16 {
+        !self.fold(0, |a, b| {
+            let mut folded = (a as u32) + (b as u32);
+            while folded > 0xFFFF {
+                folded = (folded >> 16) + (folded & 0xFFFF);
+            }
+            (folded as u16)
+        })
+    }
+}
+
 struct PairIterator<'a> {
     pos: usize,
     bytes: &'a [u8],
@@ -261,23 +278,7 @@ impl<'a> Iterator for PairIterator<'a> {
     }
 }
 
-pub trait Checksum {
-    fn checksum(&mut self) -> u16;
-}
-
-impl<T> Checksum for T where T: Iterator<Item=u16> {
-    fn checksum(&mut self) -> u16 {
-        self.fold(0, |a, b| {
-            let mut folded = (a as u32) + (b as u32);
-            while folded > 0xFFFF {
-                folded = (folded >> 16) + (folded & 0xFFFF);
-            }
-            (folded as u16)
-        })
-    }
-}
-
-pub trait Pair{
+pub trait Pair {
     fn pair_iter<'a>(&'a self) -> PairIterator<'a>;
 }
 

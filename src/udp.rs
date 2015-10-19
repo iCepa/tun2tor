@@ -2,7 +2,7 @@ use std::io::Cursor;
 use std::net::SocketAddr;
 use byteorder::{LittleEndian, BigEndian, ReadBytesExt};
 
-use ip::{IpHeader, FromBytes, Pair, Checksum};
+use ip::{IpHeader, FromBytes, Pair};
 
 pub use ip::Result;
 
@@ -35,26 +35,19 @@ impl UdpHeader {
         if self.chksum == 0 {
             true
         } else {
-            let pseudo_sum = match ip_hdr {
+            let udp_bytes = [(self.src >> 8) as u8, self.src as u8,
+                 (self.dest >> 8) as u8, self.dest as u8,
+                 (self.len >> 8) as u8, self.len as u8];
+            let data_iter = data.pair_iter().chain(udp_bytes.pair_iter());
+
+            (self.chksum == match ip_hdr {
                 &IpHeader::V4(ref ipv4_hdr) => {
-                    ipv4_hdr.pseudo_sum(data.len() as u16 + 8)
+                    ipv4_hdr.pseudo_checksum(data.len() as u16 + 8, data_iter)
                 },
                 &IpHeader::V6(ref ipv6_hdr) => {
                     0
                 }
-            };
-
-            let udp_bytes = [(self.src >> 8) as u8, self.src as u8,
-                             (self.dest >> 8) as u8, self.dest as u8,
-                             (self.len >> 8) as u8, self.len as u8];
-
-            let calculated = !(data.pair_iter()
-                                   .chain(udp_bytes.pair_iter())
-                                   .checksum() + pseudo_sum);
-
-            println!("Calculated {:?}, Actual {:?}", calculated, self.chksum);
-            
-            (self.chksum == calculated)
+            })
         }
     }
 }
