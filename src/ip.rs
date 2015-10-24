@@ -35,32 +35,6 @@ pub trait FromBytes {
     fn from_bytes(bytes: &[u8]) -> Result<Self>;
 }
 
-impl FromBytes for Ipv4Addr {
-    fn from_bytes(addr: &[u8]) -> Result<Ipv4Addr> {
-        let mut rdr = Cursor::new(addr);
-        let a = try!(rdr.read_u8());
-        let b = try!(rdr.read_u8());
-        let c = try!(rdr.read_u8());
-        let d = try!(rdr.read_u8());
-        Ok(Ipv4Addr::new(a, b, c, d))
-    }
-}
-
-impl FromBytes for Ipv6Addr {
-    fn from_bytes(addr: &[u8]) -> Result<Ipv6Addr> {
-        let mut rdr = Cursor::new(addr);
-        let a = try!(rdr.read_u16::<BigEndian>());
-        let b = try!(rdr.read_u16::<BigEndian>());
-        let c = try!(rdr.read_u16::<BigEndian>());
-        let d = try!(rdr.read_u16::<BigEndian>());
-        let e = try!(rdr.read_u16::<BigEndian>());
-        let f = try!(rdr.read_u16::<BigEndian>());
-        let g = try!(rdr.read_u16::<BigEndian>());
-        let h = try!(rdr.read_u16::<BigEndian>());
-        Ok(Ipv6Addr::new(a, b, c, d, e, f, g, h))
-    }
-}
-
 pub enum IpProto {
     Icmp,
     Igmp,
@@ -103,6 +77,32 @@ impl fmt::Debug for IpProto {
             &IpProto::Tcp => write!(f, "TCP"),
             &IpProto::Unknown(value) => write!(f, "Unknown ({})", value),
         }
+    }
+}
+
+impl FromBytes for Ipv4Addr {
+    fn from_bytes(addr: &[u8]) -> Result<Ipv4Addr> {
+        let mut rdr = Cursor::new(addr);
+        let a = try!(rdr.read_u8());
+        let b = try!(rdr.read_u8());
+        let c = try!(rdr.read_u8());
+        let d = try!(rdr.read_u8());
+        Ok(Ipv4Addr::new(a, b, c, d))
+    }
+}
+
+impl FromBytes for Ipv6Addr {
+    fn from_bytes(addr: &[u8]) -> Result<Ipv6Addr> {
+        let mut rdr = Cursor::new(addr);
+        let a = try!(rdr.read_u16::<BigEndian>());
+        let b = try!(rdr.read_u16::<BigEndian>());
+        let c = try!(rdr.read_u16::<BigEndian>());
+        let d = try!(rdr.read_u16::<BigEndian>());
+        let e = try!(rdr.read_u16::<BigEndian>());
+        let f = try!(rdr.read_u16::<BigEndian>());
+        let g = try!(rdr.read_u16::<BigEndian>());
+        let h = try!(rdr.read_u16::<BigEndian>());
+        Ok(Ipv6Addr::new(a, b, c, d, e, f, g, h))
     }
 }
 
@@ -184,9 +184,11 @@ impl Ipv4Header {
 
 #[derive(Debug)]
 pub struct Ipv6Header {
-    pub v_tc_fl: u32,
+    pub version: u8,
+    pub class: u8,
+    pub flow: u32,
     pub plen: u16,
-    pub nexth: u8,
+    pub nexth: IpProto,
     pub hoplim: u8,
     pub src: Ipv6Addr,
     pub dest: Ipv6Addr,
@@ -195,9 +197,9 @@ pub struct Ipv6Header {
 impl FromBytes for Ipv6Header {
     fn from_bytes(bytes: &[u8]) -> Result<Ipv6Header> {
         let mut rdr = Cursor::new(bytes);
-        let v_tc_fl = try!(rdr.read_u32::<BigEndian>());
-        let plen = try!(rdr.read_u16::<LittleEndian>());
-        let nexth = try!(rdr.read_u8());
+        let v_tc_fl = try!(rdr.read_u32::<LittleEndian>());
+        let plen = try!(rdr.read_u16::<BigEndian>());
+        let nexth = IpProto::new(try!(rdr.read_u8()));
         let hoplim = try!(rdr.read_u8());
 
         let pos = rdr.position() as usize;
@@ -205,13 +207,23 @@ impl FromBytes for Ipv6Header {
         let dest = try!(Ipv6Addr::from_bytes(&bytes[pos+16..pos+32]));
 
         Ok(Ipv6Header {
-            v_tc_fl: v_tc_fl,
+            version: (v_tc_fl >> 28) as u8,
+            class: ((v_tc_fl >> 20) & 0xFF) as u8,
+            flow: (v_tc_fl & 0xFFFFF),
             plen: plen,
             nexth: nexth,
             hoplim: hoplim,
             src: src,
             dest: dest,
         })
+    }
+}
+
+impl Ipv6Header {
+    pub fn pseudo_checksum<T: Iterator<Item=u16>>(&self, length: u16, data_iter: T) -> u16 {
+        let bytes = [(self.version << 4 | self.class >> 4), (self.class << 4 | (self.flow >> 16) as u8),
+                     ];
+        bytes.pair_iter().chain(data_iter).checksum()
     }
 }
 
@@ -235,8 +247,54 @@ impl FromBytes for IpHeader {
                 Err(error) => Err(error),
             },
             other => {
-                Err(Error::UnsupportedVersion(version))
+                Err(Error::UnsupportedVersion(other))
             },
+        }
+    }
+}
+
+impl IpHeader {
+    pub fn pseudo_checksum<T: Iterator<Item=u16>>(&self, length: u16, data_iter: T) -> u16 {
+        match self {
+            &IpHeader::V4(ref ipv4_hdr) => {
+                ipv4_hdr.pseudo_checksum(length, data_iter)
+            },
+            &IpHeader::V6(ref ipv6_hdr) => {
+                ipv6_hdr.pseudo_checksum(length, data_iter)
+            }
+        }
+    }
+
+    pub fn checksum_valid(&self) -> bool {
+        match self {
+            &IpHeader::V4(ref ipv4_hdr) => {
+                ipv4_hdr.checksum_valid()
+            },
+            &IpHeader::V6(ref ipv6_hdr) => {
+                true
+            }
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        match self {
+            &IpHeader::V4(ref ipv4_hdr) => {
+                ipv4_hdr.hlen
+            },
+            &IpHeader::V6(ref ipv6_hdr) => {
+                40
+            }
+        }
+    }
+
+    pub fn proto(&self) -> &IpProto {
+        match self {
+            &IpHeader::V4(ref ipv4_hdr) => {
+                &ipv4_hdr.proto
+            },
+            &IpHeader::V6(ref ipv6_hdr) => {
+                &ipv6_hdr.nexth
+            }
         }
     }
 }

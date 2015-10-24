@@ -13,48 +13,50 @@ impl TunIf {
     }
 
     pub fn input_packet(&self, packet: &[u8]) {
-        match IpHeader::from_bytes(packet) {
-            Ok(IpHeader::V4(ipv4_hdr)) => {
-                if ipv4_hdr.hlen > packet.len() {
-                    return println!("Error: IP header length is greater than total packet length, packet dropped");
-                }
-                if ipv4_hdr.checksum_valid() == false {
-                    return println!("Error: IP header checksum is invalid, packet dropped");
-                }
+        let result = IpHeader::from_bytes(packet);
+        if result.is_err() {
+            return println!("Error: IP header parsing failed: {:?}", result.err().unwrap());
+        }
 
-                let payload = &packet[ipv4_hdr.hlen..];
-                
-                match ipv4_hdr.proto {
-                    IpProto::Udp => {
-                        let ip_hdr = IpHeader::V4(ipv4_hdr);
-                        match UdpHeader::from_bytes(payload) {
-                            Ok(udp_hdr) => {
-                                let data = &payload[8..];
-                                if udp_hdr.dest != 53 {
-                                    return println!("UDP packet is not DNS, packet dropped");
-                                }
-                                if udp_hdr.checksum_valid(&data, &ip_hdr) == false {
-                                    return println!("Error: UDP header checksum is invalid, packet dropped");
-                                }
+        let header = result.unwrap();
+        if header.len() > packet.len() {
+            return println!("Error: IP header length is greater than total packet length, packet dropped");
+        }
+        if header.checksum_valid() == false {
+            return println!("Error: IP header checksum is invalid, packet dropped");
+        }
 
-                                println!("PACKET VALID!!!!");
-                            },
-                            _ => ()
-                        };
+        match &header {
+            &IpHeader::V4(ref ipv4_hdr) => (),
+            &IpHeader::V6(ref ipv6_hdr) => {
+                println!("SRC: {:?}, DST: {:?}", ipv6_hdr.src, ipv6_hdr.dest);
+            }
+        }
+
+        let payload = &packet[header.len()..];
+
+        match header.proto() {
+            &IpProto::Udp => {
+                match UdpHeader::from_bytes(payload) {
+                    Ok(udp_hdr) => {
+                        let data = &payload[8..];
+                        if udp_hdr.dest != 53 {
+                            return println!("UDP packet is not DNS, packet dropped");
+                        }
+                        if udp_hdr.checksum_valid(&data, &header) == false {
+                            return println!("Error: UDP header checksum is invalid, packet dropped");
+                        }
+
+                        println!("PACKET VALID!!!!");
                     },
-                    IpProto::Tcp => {
-                        println!("IP Proto is TCP!");
-                    },
-                    other => {
-                        return println!("IP protocol {:?} is not currently supported", other);
-                    }
+                    _ => ()
                 };
             },
-            Ok(IpHeader::V6(ipv6_hdr)) => {
-                println!("Error: TunIf cannot handle IPv6 headers yet {:?}", ipv6_hdr.src);
+            &IpProto::Tcp => {
+                println!("IP Proto is TCP!");
             },
-            Err(error) => {
-                println!("Error: {:?}, dropping packet", error);
+            ref other => {
+                return println!("IP protocol {:?} is not currently supported", other);
             }
         };
     }

@@ -45,7 +45,7 @@ impl UdpHeader {
                     ipv4_hdr.pseudo_checksum(data.len() as u16 + 8, data_iter)
                 },
                 &IpHeader::V6(ref ipv6_hdr) => {
-                    0
+                    ipv6_hdr.pseudo_checksum(data.len() as u16 + 8, data_iter)
                 }
             })
         }
