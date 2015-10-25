@@ -1,17 +1,24 @@
+//! A module exposing a virtual tunnel interface to tor.
+#![deny(missing_docs)]
+
 use ip::{IpHeader, IpProto, FromBytes};
 use udp::{UdpPcb, UdpHeader};
 
+/// A virtual tunnel interface
+#[derive(Debug)]
 pub struct TunIf {
     udp: Vec<UdpPcb>,
 }
 
 impl TunIf {
+    /// Initializes a new tunnel interface
     pub fn new() -> TunIf {
         TunIf {
             udp: Vec::new()
         }
     }
 
+    /// Sends an IP packet over tor
     pub fn input_packet(&self, packet: &[u8]) {
         let result = IpHeader::from_bytes(packet);
         if result.is_err() {

@@ -1,7 +1,10 @@
 [package]
 name = "tun2tor"
 version = "0.1.0"
-authors = ["Conrad Kramer <conrad@kramerapps.com>"]
+authors = ["Conrad Kramer <ckrames1234@gmail.com>"]
+repository = "https://github.com/iCepa/tun2tor.git"
+homepage = "https://github.com/iCepa/tun2tor"
+description = "Connect a virtual utun interface to tor"
 
 [lib]
 crate-type = ["staticlib"]
