@@ -40,9 +40,12 @@ impl UdpHeader {
         if self.chksum == 0 {
             true
         } else {
-            let udp_bytes = [(self.src >> 8) as u8, self.src as u8,
-                             (self.dest >> 8) as u8, self.dest as u8,
-                             (self.plen >> 8) as u8, self.plen as u8];
+            let udp_bytes = [(self.src >> 8) as u8,
+                             self.src as u8,
+                             (self.dest >> 8) as u8,
+                             self.dest as u8,
+                             (self.plen >> 8) as u8,
+                             self.plen as u8];
             let data_iter = data.pair_iter().chain(udp_bytes.pair_iter());
             let calculated = ip_hdr.pseudo_checksum(self.plen as u16, data_iter);
 

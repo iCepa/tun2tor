@@ -10,7 +10,7 @@ use byteorder::{LittleEndian, BigEndian, ReadBytesExt};
 
 pub enum Error {
     ByteOrder(byteorder::Error),
-    UnsupportedVersion(u8)
+    UnsupportedVersion(u8),
 }
 
 impl From<byteorder::Error> for Error {
@@ -23,7 +23,8 @@ impl fmt::Debug for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             &Error::ByteOrder(ref error) => error.fmt(f),
-            &Error::UnsupportedVersion(version) => write!(f, "Unsupported IP version {:?}", version),
+            &Error::UnsupportedVersion(version) =>
+                write!(f, "Unsupported IP version {:?}", version),
         }
     }
 }
@@ -133,8 +134,8 @@ impl FromBytes for Ipv4Header {
         let chksum = try!(rdr.read_u16::<BigEndian>());
 
         let addr_pos = rdr.position() as usize;
-        let src = try!(Ipv4Addr::from_bytes(&bytes[addr_pos..addr_pos+4])); // TODO: Prevent trap
-        let dest = try!(Ipv4Addr::from_bytes(&bytes[addr_pos+4..addr_pos+8]));
+        let src = try!(Ipv4Addr::from_bytes(&bytes[addr_pos..addr_pos + 4])); // TODO: Prevent trap
+        let dest = try!(Ipv4Addr::from_bytes(&bytes[addr_pos + 4..addr_pos + 8]));
 
         Ok(Ipv4Header {
             version: (v_hl >> 4),
@@ -153,30 +154,45 @@ impl FromBytes for Ipv4Header {
 }
 
 impl Ipv4Header {
-    pub fn pseudo_checksum<T: Iterator<Item=u16>>(&self, length: u16, data_iter: T) -> u16 {
+    pub fn pseudo_checksum<T: Iterator<Item = u16>>(&self, length: u16, data_iter: T) -> u16 {
         let src = self.src.octets();
         let dest = self.dest.octets();
-        let bytes = [(length >> 8) as u8, length as u8, 
-                     0, self.proto.value(),
-                     src[0], src[1],
-                     src[2], src[3],
-                     dest[0], dest[1],
-                     dest[2], dest[3]];
+        let bytes = [(length >> 8) as u8,
+                     length as u8,
+                     0,
+                     self.proto.value(),
+                     src[0],
+                     src[1],
+                     src[2],
+                     src[3],
+                     dest[0],
+                     dest[1],
+                     dest[2],
+                     dest[3]];
         bytes.pair_iter().chain(data_iter).checksum()
     }
 
     pub fn checksum_valid(&self) -> bool {
         let src = self.src.octets();
         let dest = self.dest.octets();
-        let bytes = [((self.version << 4) | (self.hlen / 4) as u8), self.tos,
-                     (self.len >> 8) as u8, self.len as u8, 
-                     self.id as u8, (self.id >> 8) as u8,
-                     self.offset as u8, (self.offset >> 8) as u8,
-                     self.ttl, self.proto.value(),
-                     src[0], src[1],
-                     src[2], src[3],
-                     dest[0], dest[1],
-                     dest[2], dest[3]];
+        let bytes = [((self.version << 4) | (self.hlen / 4) as u8),
+                     self.tos,
+                     (self.len >> 8) as u8,
+                     self.len as u8,
+                     self.id as u8,
+                     (self.id >> 8) as u8,
+                     self.offset as u8,
+                     (self.offset >> 8) as u8,
+                     self.ttl,
+                     self.proto.value(),
+                     src[0],
+                     src[1],
+                     src[2],
+                     src[3],
+                     dest[0],
+                     dest[1],
+                     dest[2],
+                     dest[3]];
         (self.chksum == bytes.pair_iter().checksum())
     }
 }
@@ -202,8 +218,8 @@ impl FromBytes for Ipv6Header {
         let hoplim = try!(rdr.read_u8());
 
         let pos = rdr.position() as usize;
-        let src = try!(Ipv6Addr::from_bytes(&bytes[pos..pos+16])); // TODO: Prevent trap
-        let dest = try!(Ipv6Addr::from_bytes(&bytes[pos+16..pos+32]));
+        let src = try!(Ipv6Addr::from_bytes(&bytes[pos..pos + 16])); // TODO: Prevent trap
+        let dest = try!(Ipv6Addr::from_bytes(&bytes[pos + 16..pos + 32]));
 
         Ok(Ipv6Header {
             version: (v_tc_fl >> 28) as u8,
@@ -219,28 +235,47 @@ impl FromBytes for Ipv6Header {
 }
 
 impl Ipv6Header {
-    pub fn pseudo_checksum<T: Iterator<Item=u16>>(&self, length: u32, data_iter: T) -> u16 {
+    pub fn pseudo_checksum<T: Iterator<Item = u16>>(&self, length: u32, data_iter: T) -> u16 {
         let src = self.src.segments();
         let dest = self.dest.segments();
-        let bytes = [(length >> 24) as u8, (length >> 16) as u8,
-                     (length >> 8) as u8, length as u8,
-                     (src[0] >> 8) as u8, src[0] as u8,
-                     (src[1] >> 8) as u8, src[1] as u8,
-                     (src[2] >> 8) as u8, src[2] as u8,
-                     (src[3] >> 8) as u8, src[3] as u8,
-                     (src[4] >> 8) as u8, src[4] as u8,
-                     (src[5] >> 8) as u8, src[5] as u8,
-                     (src[6] >> 8) as u8, src[6] as u8,
-                     (src[7] >> 8) as u8, src[7] as u8,
-                     (dest[0] >> 8) as u8, dest[0] as u8,
-                     (dest[1] >> 8) as u8, dest[1] as u8,
-                     (dest[2] >> 8) as u8, dest[2] as u8,
-                     (dest[3] >> 8) as u8, dest[3] as u8,
-                     (dest[4] >> 8) as u8, dest[4] as u8,
-                     (dest[5] >> 8) as u8, dest[5] as u8,
-                     (dest[6] >> 8) as u8, dest[6] as u8,
-                     (dest[7] >> 8) as u8, dest[7] as u8,
-                     0, self.nexth.value()];
+        let bytes = [(length >> 24) as u8,
+                     (length >> 16) as u8,
+                     (length >> 8) as u8,
+                     length as u8,
+                     (src[0] >> 8) as u8,
+                     src[0] as u8,
+                     (src[1] >> 8) as u8,
+                     src[1] as u8,
+                     (src[2] >> 8) as u8,
+                     src[2] as u8,
+                     (src[3] >> 8) as u8,
+                     src[3] as u8,
+                     (src[4] >> 8) as u8,
+                     src[4] as u8,
+                     (src[5] >> 8) as u8,
+                     src[5] as u8,
+                     (src[6] >> 8) as u8,
+                     src[6] as u8,
+                     (src[7] >> 8) as u8,
+                     src[7] as u8,
+                     (dest[0] >> 8) as u8,
+                     dest[0] as u8,
+                     (dest[1] >> 8) as u8,
+                     dest[1] as u8,
+                     (dest[2] >> 8) as u8,
+                     dest[2] as u8,
+                     (dest[3] >> 8) as u8,
+                     dest[3] as u8,
+                     (dest[4] >> 8) as u8,
+                     dest[4] as u8,
+                     (dest[5] >> 8) as u8,
+                     dest[5] as u8,
+                     (dest[6] >> 8) as u8,
+                     dest[6] as u8,
+                     (dest[7] >> 8) as u8,
+                     dest[7] as u8,
+                     0,
+                     self.nexth.value()];
         bytes.pair_iter().chain(data_iter).checksum()
     }
 }
@@ -266,17 +301,17 @@ impl FromBytes for IpHeader {
             },
             other => {
                 Err(Error::UnsupportedVersion(other))
-            },
+            }
         }
     }
 }
 
 impl IpHeader {
-    pub fn pseudo_checksum<T: Iterator<Item=u16>>(&self, length: u16, data_iter: T) -> u16 {
+    pub fn pseudo_checksum<T: Iterator<Item = u16>>(&self, length: u16, data_iter: T) -> u16 {
         match self {
             &IpHeader::V4(ref ipv4_hdr) => {
                 ipv4_hdr.pseudo_checksum(length, data_iter)
-            },
+            }
             &IpHeader::V6(ref ipv6_hdr) => {
                 ipv6_hdr.pseudo_checksum(length as u32, data_iter)
             }
@@ -287,7 +322,7 @@ impl IpHeader {
         match self {
             &IpHeader::V4(ref ipv4_hdr) => {
                 ipv4_hdr.checksum_valid()
-            },
+            }
             &IpHeader::V6(ref _ipv6_hdr) => {
                 true
             }
@@ -298,7 +333,7 @@ impl IpHeader {
         match self {
             &IpHeader::V4(ref ipv4_hdr) => {
                 ipv4_hdr.hlen
-            },
+            }
             &IpHeader::V6(ref _ipv6_hdr) => {
                 40
             }
@@ -309,7 +344,7 @@ impl IpHeader {
         match self {
             &IpHeader::V4(ref ipv4_hdr) => {
                 &ipv4_hdr.proto
-            },
+            }
             &IpHeader::V6(ref ipv6_hdr) => {
                 &ipv6_hdr.nexth
             }
@@ -347,7 +382,12 @@ impl<'a> Iterator for PairIterator<'a> {
         self.pos += 2;
 
         if pos < len {
-            Some(((self.bytes[pos] as u16) << 8) + (if pos < len - 1 { self.bytes[pos + 1] as u16 } else { 0 }))
+            Some(((self.bytes[pos] as u16) << 8) +
+                 (if pos < len - 1 {
+                self.bytes[pos + 1] as u16
+            } else {
+                0
+            }))
         } else {
             None
         }

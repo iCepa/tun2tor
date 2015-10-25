@@ -1,6 +1,7 @@
 //! A module exposing a C FFI for `tun2tor`.
 //!
-//! The `ffi` module exposes the functionality of the `tunif` module as a number of C functions
+//! The `ffi` module exposes the functionality of the `tunif` module as a
+//! number of C functions
 #![allow(unsafe_code)]
 #![deny(missing_docs)]
 
@@ -16,29 +17,23 @@ use tunif::TunIf;
 /// ```
 #[no_mangle]
 #[allow(dead_code)]
-pub extern "C" fn tunif_new() -> *mut TunIf {
-    unsafe {
-        let ptr: *mut TunIf = mem::transmute(Box::new(TunIf::new()));
-        ptr
-    }
+pub unsafe extern "C" fn tunif_new() -> *mut TunIf {
+    let ptr: *mut TunIf = mem::transmute(Box::new(TunIf::new()));
+    ptr
 }
 
 /// Frees an existing tunnel interface
 #[no_mangle]
 #[allow(dead_code)]
-pub extern "C" fn tunif_free(tunif: *mut TunIf) {
-    unsafe {
-        let tunif: Box<TunIf> = mem::transmute(tunif);
-        drop(tunif)
-    }
+pub unsafe extern "C" fn tunif_free(tunif: *mut TunIf) {
+    let tunif: Box<TunIf> = mem::transmute(tunif);
+    drop(tunif)
 }
 
 /// Sends a packet to the given tunnel interface
 #[no_mangle]
 #[allow(dead_code)]
-pub extern "C" fn tunif_input_packet(tunif: *mut TunIf, buffer: *const c_void, len: usize) {
-    unsafe {
-        let packet = slice::from_raw_parts(buffer as *const u8, len);
-        (*tunif).input_packet(packet);
-    }
+pub unsafe extern "C" fn tunif_input_packet(tunif: *mut TunIf, buffer: *const c_void, len: usize) {
+    let packet = slice::from_raw_parts(buffer as *const u8, len);
+    (*tunif).input_packet(packet);
 }
