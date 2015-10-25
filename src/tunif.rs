@@ -1,4 +1,4 @@
-use ip::{IpHeader, Ipv4Header, Ipv6Header, IpProto, FromBytes};
+use ip::{IpHeader, IpProto, FromBytes};
 use udp::{UdpPcb, UdpHeader};
 
 pub struct TunIf {
@@ -26,20 +26,13 @@ impl TunIf {
             return println!("Error: IP header checksum is invalid, packet dropped");
         }
 
-        match &header {
-            &IpHeader::V4(ref ipv4_hdr) => (),
-            &IpHeader::V6(ref ipv6_hdr) => {
-                println!("SRC: {:?}, DST: {:?}", ipv6_hdr.src, ipv6_hdr.dest);
-            }
-        }
-
         let payload = &packet[header.len()..];
 
         match header.proto() {
             &IpProto::Udp => {
                 match UdpHeader::from_bytes(payload) {
                     Ok(udp_hdr) => {
-                        let data = &payload[8..];
+                        let data = &payload[udp_hdr.len()..];
                         if udp_hdr.dest != 53 {
                             return println!("UDP packet is not DNS, packet dropped");
                         }

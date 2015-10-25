@@ -1,5 +1,4 @@
 use std::fmt;
-use std::mem;
 use std::result;
 use std::convert::From;
 use std::io::Cursor;
@@ -203,7 +202,7 @@ impl FromBytes for Ipv6Header {
         let hoplim = try!(rdr.read_u8());
 
         let pos = rdr.position() as usize;
-        let src = try!(Ipv6Addr::from_bytes(&bytes[pos..pos+16]));
+        let src = try!(Ipv6Addr::from_bytes(&bytes[pos..pos+16])); // TODO: Prevent trap
         let dest = try!(Ipv6Addr::from_bytes(&bytes[pos+16..pos+32]));
 
         Ok(Ipv6Header {
@@ -220,9 +219,28 @@ impl FromBytes for Ipv6Header {
 }
 
 impl Ipv6Header {
-    pub fn pseudo_checksum<T: Iterator<Item=u16>>(&self, length: u16, data_iter: T) -> u16 {
-        let bytes = [(self.version << 4 | self.class >> 4), (self.class << 4 | (self.flow >> 16) as u8),
-                     ];
+    pub fn pseudo_checksum<T: Iterator<Item=u16>>(&self, length: u32, data_iter: T) -> u16 {
+        let src = self.src.segments();
+        let dest = self.dest.segments();
+        let bytes = [(length >> 24) as u8, (length >> 16) as u8,
+                     (length >> 8) as u8, length as u8,
+                     (src[0] >> 8) as u8, src[0] as u8,
+                     (src[1] >> 8) as u8, src[1] as u8,
+                     (src[2] >> 8) as u8, src[2] as u8,
+                     (src[3] >> 8) as u8, src[3] as u8,
+                     (src[4] >> 8) as u8, src[4] as u8,
+                     (src[5] >> 8) as u8, src[5] as u8,
+                     (src[6] >> 8) as u8, src[6] as u8,
+                     (src[7] >> 8) as u8, src[7] as u8,
+                     (dest[0] >> 8) as u8, dest[0] as u8,
+                     (dest[1] >> 8) as u8, dest[1] as u8,
+                     (dest[2] >> 8) as u8, dest[2] as u8,
+                     (dest[3] >> 8) as u8, dest[3] as u8,
+                     (dest[4] >> 8) as u8, dest[4] as u8,
+                     (dest[5] >> 8) as u8, dest[5] as u8,
+                     (dest[6] >> 8) as u8, dest[6] as u8,
+                     (dest[7] >> 8) as u8, dest[7] as u8,
+                     0, self.nexth.value()];
         bytes.pair_iter().chain(data_iter).checksum()
     }
 }
@@ -260,7 +278,7 @@ impl IpHeader {
                 ipv4_hdr.pseudo_checksum(length, data_iter)
             },
             &IpHeader::V6(ref ipv6_hdr) => {
-                ipv6_hdr.pseudo_checksum(length, data_iter)
+                ipv6_hdr.pseudo_checksum(length as u32, data_iter)
             }
         }
     }
@@ -270,7 +288,7 @@ impl IpHeader {
             &IpHeader::V4(ref ipv4_hdr) => {
                 ipv4_hdr.checksum_valid()
             },
-            &IpHeader::V6(ref ipv6_hdr) => {
+            &IpHeader::V6(ref _ipv6_hdr) => {
                 true
             }
         }
@@ -281,7 +299,7 @@ impl IpHeader {
             &IpHeader::V4(ref ipv4_hdr) => {
                 ipv4_hdr.hlen
             },
-            &IpHeader::V6(ref ipv6_hdr) => {
+            &IpHeader::V6(ref _ipv6_hdr) => {
                 40
             }
         }
