@@ -1,0 +1,16 @@
+{
+    "folders":
+    [
+        {
+            "path": ".",
+            "folder_exclude_patterns": ["target"],
+            "file_exclude_patterns": [".git", ".gitignore", "Cargo.lock"],
+        },
+    ],
+    "settings":
+    {
+        "tab_size": 4,
+        "translate_tabs_to_spaces": true,
+        "detect_indentation": false,
+    }
+}
