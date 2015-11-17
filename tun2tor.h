@@ -15,6 +15,8 @@ struct _tunif;
 typedef struct _tunif tunif;
 
 T2T_EXTERN tunif *tunif_new();
-T2T_EXTERN void *tunif_free(tunif *interface);
+T2T_EXTERN void *tunif_free(tunif *iface);
 
-T2T_EXTERN void tunif_input_packet(tunif *interface, const void *buffer, size_t len);
+T2T_EXTERN void tunif_input_packet(tunif *iface, const void *buffer, size_t len);
+T2T_EXTERN void tunif_set_packet_callback(tunif *iface, void *context, void (*packet_callback)(tunif *iface, void *context, const void *buffer, size_t len));
+

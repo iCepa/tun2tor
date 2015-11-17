@@ -6,6 +6,7 @@
 
 extern crate byteorder;
 extern crate libc;
+extern crate mio;
 
 mod ip;
 mod udp;

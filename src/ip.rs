@@ -31,7 +31,7 @@ impl fmt::Debug for Error {
 
 pub type Result<T> = result::Result<T, Error>;
 
-pub trait FromBytes {
+pub trait FromBytes where Self: Sized {
     fn from_bytes(bytes: &[u8]) -> Result<Self>;
 }
 
@@ -236,6 +236,7 @@ impl FromBytes for Ipv6Header {
 
 impl Ipv6Header {
     pub fn pseudo_checksum<T: Iterator<Item = u16>>(&self, length: u32, data_iter: T) -> u16 {
+        // TODO: Make this work correctly
         let src = self.src.segments();
         let dest = self.dest.segments();
         let bytes = [(length >> 24) as u8,
@@ -382,12 +383,12 @@ impl<'a> Iterator for PairIterator<'a> {
         self.pos += 2;
 
         if pos < len {
-            Some(((self.bytes[pos] as u16) << 8) +
-                 (if pos < len - 1 {
+            let lsb = if pos < len - 1 {
                 self.bytes[pos + 1] as u16
             } else {
                 0
-            }))
+            };
+            Some(((self.bytes[pos] as u16) << 8) + lsb)
         } else {
             None
         }

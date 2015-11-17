@@ -1,5 +1,4 @@
 use std::io::Cursor;
-use std::net::SocketAddr;
 use byteorder::{BigEndian, ReadBytesExt};
 
 use ip::{IpHeader, FromBytes, Pair};
@@ -52,10 +51,4 @@ impl UdpHeader {
             (self.chksum == calculated)
         }
     }
-}
-
-#[derive(Debug)]
-pub struct UdpPcb {
-    local: SocketAddr,
-    remote: SocketAddr,
 }
