@@ -1,14 +1,23 @@
 #![deny(unsafe_code,
-        missing_debug_implementations,
-        trivial_casts, trivial_numeric_casts,
         unstable_features,
-        unused_import_braces, unused_qualifications)]
+        unused_extern_crates,
+        unused_import_braces,
+        unused_qualifications,
+        warnings,
+        missing_debug_implementations,
+        trivial_casts,
+        trivial_numeric_casts)]
 
-extern crate byteorder;
 extern crate libc;
 extern crate mio;
 
+#[macro_use]
+mod result;
+mod packet;
 mod ip;
 mod udp;
-pub mod tunif;
+mod tunif;
 pub mod ffi;
+
+pub use result::{Result, Error};
+pub use tunif::TunIf;

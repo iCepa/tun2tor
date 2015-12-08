@@ -1,54 +1,92 @@
-use std::io::Cursor;
-use byteorder::{BigEndian, ReadBytesExt};
-
-use ip::{IpHeader, FromBytes, Pair};
-
-pub use ip::Result;
+use packet::{PktBuf, MutPktBuf, Header, Pair, Checksum};
+use ip::IpHeader;
 
 #[derive(Debug)]
-pub struct UdpHeader {
-    pub src: u16,
-    pub dest: u16,
-    pub plen: usize,
-    chksum: u16,
+pub struct UdpHeader<T: PktBuf> {
+    buf: T,
 }
 
-impl FromBytes for UdpHeader {
-    fn from_bytes(packet: &[u8]) -> Result<UdpHeader> {
-        let mut rdr = Cursor::new(packet);
-        let src = try!(rdr.read_u16::<BigEndian>());
-        let dest = try!(rdr.read_u16::<BigEndian>());
-        let plen = try!(rdr.read_u16::<BigEndian>()) as usize;
-        let chksum = try!(rdr.read_u16::<BigEndian>());
-
-        Ok(UdpHeader {
-            src: src,
-            dest: dest,
-            plen: plen,
-            chksum: chksum,
-        })
+impl<T> Header<T> for UdpHeader<T> where T: PktBuf {
+    fn with_buf(buf: T) -> UdpHeader<T> {
+        UdpHeader { buf: buf }
     }
-}
 
-impl UdpHeader {
-    pub fn len(&self) -> usize {
+    fn into_buf(self) -> T {
+        self.buf
+    }
+
+    fn max_len() -> usize {
         8
     }
 
-    pub fn checksum_valid(&self, data: &[u8], ip_hdr: &IpHeader) -> bool {
-        if self.chksum == 0 {
-            true
-        } else {
-            let udp_bytes = [(self.src >> 8) as u8,
-                             self.src as u8,
-                             (self.dest >> 8) as u8,
-                             self.dest as u8,
-                             (self.plen >> 8) as u8,
-                             self.plen as u8];
-            let data_iter = data.pair_iter().chain(udp_bytes.pair_iter());
-            let calculated = ip_hdr.pseudo_checksum(self.plen as u16, data_iter);
+    fn len(&self) -> usize {
+        UdpHeader::<T>::max_len()
+    }
+}
 
-            (self.chksum == calculated)
-        }
+impl<T> UdpHeader<T> where T: PktBuf {
+    pub fn src(&self) -> u16 {
+        let mut src = [0; 2];
+        self.buf.read_slice(0, &mut src);
+        ((src[0] as u16) << 8 | src[1] as u16)
+    }
+
+    pub fn dest(&self) -> u16 {
+        let mut dest = [0; 2];
+        self.buf.read_slice(2, &mut dest);
+        ((dest[0] as u16) << 8 | dest[1] as u16)
+    }
+
+    pub fn udp_len(&self) -> usize {
+        let mut len = [0; 2];
+        self.buf.read_slice(4, &mut len);
+        ((len[0] as u16) << 8 | len[1] as u16) as usize
+    }
+
+    pub fn data_len(&self) -> usize {
+        self.udp_len() - self.len()
+    }
+
+    fn checksum(&self) -> u16 {
+        let mut checksum = [0; 2];
+        self.buf.read_slice(6, &mut checksum);
+        ((checksum[0] as u16) << 8 | checksum[1] as u16)
+    }
+
+    pub fn checksum_valid<U: PktBuf, V: Iterator<Item = u16>>(&self,
+                                                              header: &IpHeader<U>,
+                                                              data: V)
+                                                              -> bool {
+        let bytes = self.buf.cursor().into_inner();
+        let pseudo = header.pseudo_iter(self.udp_len());
+        let checksum = (&bytes[..6]).pair_iter().chain(pseudo).chain(data).checksum();
+        (self.checksum() == checksum)
+    }
+
+    pub fn calculate_checksum<U: PktBuf, V: Iterator<Item = u16>>(&self,
+                                                                  header: &IpHeader<U>,
+                                                                  data: V)
+                                                                  -> u16 {
+        let bytes = self.buf.cursor().into_inner();
+        let pseudo = header.pseudo_iter(self.udp_len());
+        (&bytes[..6]).pair_iter().chain(pseudo).chain(data).checksum()
+    }
+}
+
+impl<T> UdpHeader<T> where T: MutPktBuf, T: PktBuf {
+    pub fn set_src(&mut self, src: u16) {
+        self.buf.write_slice(0, &[(src >> 8) as u8, src as u8]);
+    }
+
+    pub fn set_dest(&mut self, dest: u16) {
+        self.buf.write_slice(2, &[(dest >> 8) as u8, dest as u8]);
+    }
+
+    pub fn set_udp_len(&mut self, len: usize) {
+        self.buf.write_slice(4, &[((len as u16) >> 8) as u8, len as u8]);
+    }
+
+    pub fn set_checksum(&mut self, checksum: u16) {
+        self.buf.write_slice(6, &[(checksum >> 8) as u8, checksum as u8]);
     }
 }

@@ -4,4 +4,5 @@ version = "0.1.0"
 authors = ["Conrad Kramer <ckrames1234@gmail.com>"]
 
 [dependencies]
-byteorder = "*"
+libc = "0.2"
+

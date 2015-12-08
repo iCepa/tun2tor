@@ -3,54 +3,21 @@
 use std::thread;
 use std::fmt;
 use std::sync::{Arc, Mutex};
-use std::net::{SocketAddr, SocketAddrV4, Ipv4Addr};
+use std::net::UdpSocket;
 
-use ip::{IpHeader, IpProto, FromBytes};
+use result::{Result, Error};
+use packet::{Header, Pair};
+use ip::{IpHeader, IpProto};
 use udp::UdpHeader;
-
-use mio::{EventLoop, Token, Handler, EventSet, PollOpt};
-use mio::udp::UdpSocket;
-
-const DNS_HANDLER: Token = Token(0);
-
-/// A handle for a UDP connection
-#[derive(Debug)]
-pub struct UdpPcb {
-    sock: UdpSocket,
-    tunif: Arc<Mutex<TunIf>>,
-}
-
-impl Handler for UdpPcb {
-    type Timeout = ();
-    type Message = ();
-
-    fn ready(&mut self, _: &mut EventLoop<UdpPcb>, _: Token, _: EventSet) {
-        let mut buffer: [u8; 4096] = [0; 4096];
-        let data = match self.sock.recv_from(&mut buffer) {
-            Ok(Some((len, _addr))) => Some(&buffer[..len]),
-            _ => None,
-        };
-
-        // TODO: Wrap the data into a proper IP packet
-
-        match data {
-            Some(d) => match &self.tunif.lock().unwrap().pkt_cb {
-                &Some(ref cb) => cb(&d),
-                &None => return,
-            },
-            None => return,
-        }
-    }
-}
 
 /// A virtual tunnel interface
 pub struct TunIf {
-    pkt_cb: Option<Box<Fn(&[u8]) + Send>>,
+    pkt_cb: Option<Box<Fn(&[u8], u8) + Send>>,
 }
 
 impl fmt::Debug for TunIf {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "TunIf")
+        write!(f, "TunIf {{ }}")
     }
 }
 
@@ -61,86 +28,105 @@ impl TunIf {
     }
 }
 
-/// A packet-level interface for TunIf
-pub trait PktHandler {
-    /// Sends an IP packet over tor
-    fn input_packet(&self, packet: &[u8]);
+/// An IP packet interface for TunIf
+pub trait IpHandler {
+    /// Takes an IP packet from the interface and forwards it over tor
+    fn input_packet(&self, packet: &[u8]) -> Result<()>;
+
+    /// Outputs a packet to the interface from tor
+    fn output_packet(&self, packet: &[u8], proto: u8);
 
     /// Sets a callback to receive packets from tor
-    fn set_packet_callback(&self, cb: Option<Box<Fn(&[u8]) + Send>>);
+    fn set_packet_callback(&self, cb: Option<Box<Fn(&[u8], u8) + Send>>);
 }
 
-impl PktHandler for Arc<Mutex<TunIf>> {
-    fn input_packet(&self, packet: &[u8]) {
-        let result = IpHeader::from_bytes(packet);
-        if result.is_err() {
-            return println!("IP header parsing failed: {:?}", result.err().unwrap());
+impl IpHandler for Arc<Mutex<TunIf>> {
+    fn input_packet(&self, packet: &[u8]) -> Result<()> {
+        let ip_hdr = try!(IpHeader::with_buf(packet));
+        if !ip_hdr.checksum_valid() {
+            return Err(Error::IPChecksumInvalid);
         }
 
-        let header = result.unwrap();
-        if header.len() > packet.len() {
-            return println!("IP header length is greater than total packet length, packet dropped");
-        }
-        if header.checksum_valid() == false {
-            return println!("IP header checksum is invalid, packet dropped");
-        }
-
-        let payload = &packet[header.len()..];
-
-        match header.proto() {
-            &IpProto::Udp => {
-                match UdpHeader::from_bytes(payload) {
-                    Ok(udp_hdr) => {
-                        if udp_hdr.dest != 53 {
-                            return println!("UDP packet is not DNS, packet dropped");
-                        }
-                        if udp_hdr.len() > payload.len() {
-                            return println!("UDP header length is greater than payload length, \
-                                             packet dropped");
-                        }
-
-                        let data = &payload[udp_hdr.len()..];
-
-                        if udp_hdr.checksum_valid(&data, &header) == false {
-                            // return println!("UDP header checksum is invalid, packet dropped");
-                        }
-
-                        let clone = self.clone();
-                        let bytes = data.to_vec().into_boxed_slice();
-
-                        thread::spawn(move || {
-                            let mut event_loop = EventLoop::new().unwrap();
-
-                            let localhost = Ipv4Addr::new(127, 0, 0, 1);
-                            let src = SocketAddr::V4(SocketAddrV4::new(localhost, 0));
-                            let sock = UdpSocket::bound(&src).unwrap();
-                            event_loop.register(&sock,
-                                                DNS_HANDLER,
-                                                EventSet::readable(),
-                                                PollOpt::level())
-                                      .unwrap();
-
-                            // TODO: Make DNSPort configuratble
-                            let dest = SocketAddr::V4(SocketAddrV4::new(localhost, 12345));
-                            sock.send_to(&*bytes, &dest);
-
-                            let mut handler = UdpPcb {
-                                sock: sock,
-                                tunif: clone,
-                            };
-                            event_loop.run(&mut handler).unwrap();
-                        });
-                    }
-                    Err(err) =>
-                        println!("UDP header could not be parsed {:?}, packet dropped", err),
+        let payload = &packet[ip_hdr.len()..];
+        match ip_hdr.proto() {
+            IpProto::Udp => {
+                let udp_hdr = UdpHeader::with_buf(payload);
+                let data = &payload[udp_hdr.len()..][..udp_hdr.data_len()];
+                if udp_hdr.dest() != 53 {
+                    return Err(Error::IPProtoNotSupported(IpProto::Udp));
                 }
+                if !udp_hdr.checksum_valid(&ip_hdr, data.pair_iter()) {
+                    return Err(Error::IPChecksumInvalid); // TODO: Make into UDP specific error
+                }
+
+                let tunif = self.clone();
+                let bytes = data.to_vec().into_boxed_slice();
+                let src_ip = ip_hdr.src();
+                let dest_ip = ip_hdr.dest();
+                let src_port = udp_hdr.src();
+                let dest_port = udp_hdr.dest();
+
+                thread::spawn(move || {
+                    let socket = try_log!(UdpSocket::bind("127.0.0.1:0"));
+                    try_log!(socket.send_to(&*bytes, "127.0.0.1:12345")); // TODO: Allow configuration of DNSPort
+                    drop(bytes);
+
+                    let mut buf = [0; 512 + 60 + 8]; // TODO: Use max_len() when converted to associated constants
+
+                    let (ip_len, ip_ver) = {
+                        let mut ip_hdr = IpHeader::with_buf_hint(&mut buf[..], &src_ip);
+                        ip_hdr.initialize();
+                        ip_hdr.set_src(&dest_ip);
+                        ip_hdr.set_dest(&src_ip);
+                        ip_hdr.set_proto(&IpProto::Udp);
+                        (ip_hdr.len(), ip_hdr.version())
+                    };
+
+                    let udp_len = {
+                        let mut udp_hdr = UdpHeader::with_buf(&mut buf[ip_len..]);
+                        udp_hdr.set_dest(src_port);
+                        udp_hdr.set_src(dest_port);
+                        udp_hdr.len()
+                    };
+                    let (data_len, _addr) = try_log!(socket.recv_from(&mut buf[ip_len +
+                                                                               udp_len..]));
+
+                    let total_len = ip_len + udp_len + data_len;
+                    {
+                        let mut ip_hdr = IpHeader::with_buf(&mut buf[..]).unwrap();
+                        ip_hdr.set_total_len(total_len);
+                        ip_hdr.calculate_checksum();
+                    }
+                    {
+                        let mut udp_hdr = UdpHeader::with_buf(&mut buf[ip_len..]);
+                        udp_hdr.set_udp_len(udp_len + data_len);
+                    }
+
+                    let checksum = {
+                        let ip_hdr = IpHeader::with_buf(&buf[..]).unwrap();
+                        let udp_hdr = UdpHeader::with_buf(&buf[ip_len..]);
+                        udp_hdr.calculate_checksum(&ip_hdr,
+                                                   (&buf[ip_len + udp_len..total_len]).pair_iter())
+                    };
+                    UdpHeader::with_buf(&mut buf[ip_len..]).set_checksum(checksum);
+
+                    tunif.output_packet(&buf[..total_len], ip_ver);
+                });
             }
-            &IpProto::Tcp => println!("IP Proto is TCP!"),
-            ref other => println!("IP protocol {:?} is not currently supported", other),
+            // TODO: Support TCP
+            p => return Err(Error::IPProtoNotSupported(p)),
+        }
+        Ok(())
+    }
+
+    fn output_packet(&self, packet: &[u8], proto: u8) {
+        match (*self).lock().unwrap().pkt_cb {
+            Some(ref cb) => cb(packet, proto),
+            None => (),
         }
     }
 
-    fn set_packet_callback(&self, cb: Option<Box<Fn(&[u8]) + Send>>) {
+    fn set_packet_callback(&self, cb: Option<Box<Fn(&[u8], u8) + Send>>) {
         self.lock().unwrap().pkt_cb = cb;
     }
 }
