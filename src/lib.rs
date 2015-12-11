@@ -16,6 +16,7 @@ mod result;
 mod packet;
 mod ip;
 mod udp;
+mod tcp;
 mod tunif;
 pub mod ffi;
 

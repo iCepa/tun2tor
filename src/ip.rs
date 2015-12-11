@@ -93,6 +93,12 @@ impl<T> Ipv4Header<T> where T: PktBuf {
         Ipv4Addr::new(dest[0], dest[1], dest[2], dest[3])
     }
 
+    pub fn total_len(&self) -> usize {
+        let mut len = [0; 2];
+        self.buf.read_slice(2, &mut len);
+        ((len[0] as u16) << 8 | len[1] as u16) as usize
+    }
+
     pub fn proto(&self) -> IpProto {
         let mut proto = [0; 1];
         self.buf.read_slice(9, &mut proto);
@@ -191,6 +197,10 @@ impl<T> Ipv6Header<T> where T: PktBuf {
         unimplemented!();
     }
 
+    pub fn total_len(&self) -> usize {
+        unimplemented!();
+    }
+
     pub fn proto(&self) -> IpProto {
         unimplemented!();
     }
@@ -269,6 +279,13 @@ impl<T> IpHeader<T> where T: PktBuf {
         match *self {
             IpHeader::V4(ref h) => h.len(),
             IpHeader::V6(ref h) => h.len(),
+        }
+    }
+
+    pub fn total_len(&self) -> usize {
+        match *self {
+            IpHeader::V4(ref h) => h.total_len(),
+            IpHeader::V6(ref h) => h.total_len(),
         }
     }
 

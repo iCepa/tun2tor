@@ -9,6 +9,7 @@ use result::{Result, Error};
 use packet::{Header, Pair};
 use ip::{IpHeader, IpProto};
 use udp::UdpHeader;
+use tcp::TcpHeader;
 
 /// A virtual tunnel interface
 pub struct TunIf {
@@ -113,7 +114,15 @@ impl IpHandler for Arc<Mutex<TunIf>> {
                     tunif.output_packet(&buf[..total_len], ip_ver);
                 });
             }
-            // TODO: Support TCP
+            IpProto::Tcp => {
+                let tcp_hdr = TcpHeader::with_buf(payload);
+                let data = &packet[ip_hdr.len() + tcp_hdr.len()..ip_hdr.total_len()];
+                if !tcp_hdr.checksum_valid(&ip_hdr, data.pair_iter()) {
+                    return Err(Error::IPChecksumInvalid); // TODO: Make into TCPP specific error
+                }
+
+                // TODO: Do something with the packet
+            }
             p => return Err(Error::IPProtoNotSupported(p)),
         }
         Ok(())

@@ -1,14 +1,16 @@
+#![allow(dead_code)]
+
 use packet::{PktBuf, MutPktBuf, Header, Pair, Checksum};
 use ip::IpHeader;
 
 #[derive(Debug)]
-pub struct UdpHeader<T: PktBuf> {
+pub struct TcpHeader<T: PktBuf> {
     buf: T,
 }
 
-impl<T> Header<T> for UdpHeader<T> where T: PktBuf {
-    fn with_buf(buf: T) -> UdpHeader<T> {
-        UdpHeader { buf: buf }
+impl<T> Header<T> for TcpHeader<T> where T: PktBuf {
+    fn with_buf(buf: T) -> TcpHeader<T> {
+        TcpHeader { buf: buf }
     }
 
     fn into_buf(self) -> T {
@@ -16,15 +18,17 @@ impl<T> Header<T> for UdpHeader<T> where T: PktBuf {
     }
 
     fn max_len() -> usize {
-        8
+        60
     }
 
     fn len(&self) -> usize {
-        UdpHeader::<T>::max_len()
+        let mut len = [0; 1];
+        self.buf.read_slice(12, &mut len);
+        ((len[0] >> 4) * 4) as usize
     }
 }
 
-impl<T> UdpHeader<T> where T: PktBuf {
+impl<T> TcpHeader<T> where T: PktBuf {
     pub fn src(&self) -> u16 {
         let mut src = [0; 2];
         self.buf.read_slice(0, &mut src);
@@ -37,19 +41,9 @@ impl<T> UdpHeader<T> where T: PktBuf {
         ((dest[0] as u16) << 8 | dest[1] as u16)
     }
 
-    pub fn udp_len(&self) -> usize {
-        let mut len = [0; 2];
-        self.buf.read_slice(4, &mut len);
-        ((len[0] as u16) << 8 | len[1] as u16) as usize
-    }
-
-    pub fn data_len(&self) -> usize {
-        self.udp_len() - self.len()
-    }
-
     fn checksum(&self) -> u16 {
         let mut checksum = [0; 2];
-        self.buf.read_slice(6, &mut checksum);
+        self.buf.read_slice(16, &mut checksum);
         ((checksum[0] as u16) << 8 | checksum[1] as u16)
     }
 
@@ -65,12 +59,17 @@ impl<T> UdpHeader<T> where T: PktBuf {
                                                                   data: V)
                                                                   -> u16 {
         let bytes = self.buf.cursor().into_inner();
-        let pseudo = header.pseudo_iter(self.udp_len());
-        (&bytes[..6]).pair_iter().chain(pseudo).chain(data).checksum()
+        let pseudo = header.pseudo_iter(header.total_len() - header.len());
+        (&bytes[..16])
+            .pair_iter()
+            .chain((&bytes[18..self.len()]).pair_iter())
+            .chain(pseudo)
+            .chain(data)
+            .checksum()
     }
 }
 
-impl<T> UdpHeader<T> where T: MutPktBuf, T: PktBuf {
+impl<T> TcpHeader<T> where T: MutPktBuf, T: PktBuf {
     pub fn set_src(&mut self, src: u16) {
         self.buf.write_slice(0, &[(src >> 8) as u8, src as u8]);
     }
@@ -79,11 +78,7 @@ impl<T> UdpHeader<T> where T: MutPktBuf, T: PktBuf {
         self.buf.write_slice(2, &[(dest >> 8) as u8, dest as u8]);
     }
 
-    pub fn set_udp_len(&mut self, len: usize) {
-        self.buf.write_slice(4, &[((len as u16) >> 8) as u8, len as u8]);
-    }
-
     pub fn set_checksum(&mut self, checksum: u16) {
-        self.buf.write_slice(6, &[(checksum >> 8) as u8, checksum as u8]);
+        self.buf.write_slice(16, &[(checksum >> 8) as u8, checksum as u8]);
     }
 }
