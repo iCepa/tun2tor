@@ -58,11 +58,11 @@ impl<T> TcpHeader<T> where T: PktBuf {
                                                                   header: &IpHeader<U>,
                                                                   data: V)
                                                                   -> u16 {
-        let bytes = self.buf.cursor().into_inner();
+        let bytes = self.buf.borrow();
         let pseudo = header.pseudo_iter(header.total_len() - header.len());
-        (&bytes[..16])
+        bytes[..16]
             .pair_iter()
-            .chain((&bytes[18..self.len()]).pair_iter())
+            .chain(bytes[18..self.len()].pair_iter())
             .chain(pseudo)
             .chain(data)
             .checksum()
@@ -71,14 +71,14 @@ impl<T> TcpHeader<T> where T: PktBuf {
 
 impl<T> TcpHeader<T> where T: MutPktBuf, T: PktBuf {
     pub fn set_src(&mut self, src: u16) {
-        self.buf.write_slice(0, &[(src >> 8) as u8, src as u8]);
+        self.buf.write_u16(0, src);
     }
 
     pub fn set_dest(&mut self, dest: u16) {
-        self.buf.write_slice(2, &[(dest >> 8) as u8, dest as u8]);
+        self.buf.write_u16(2, dest);
     }
 
     pub fn set_checksum(&mut self, checksum: u16) {
-        self.buf.write_slice(16, &[(checksum >> 8) as u8, checksum as u8]);
+        self.buf.write_u16(16, checksum);
     }
 }

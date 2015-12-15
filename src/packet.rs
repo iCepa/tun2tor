@@ -1,60 +1,52 @@
 use std::iter;
 use std::slice;
 use std::io::{Cursor, Read, Write};
+use std::borrow::{Borrow, BorrowMut};
 
-pub trait PktBuf {
-    fn cursor<'a>(&'a self) -> Cursor<&'a [u8]>;
-    fn read_slice(&self, pos: usize, dst: &mut [u8]) -> usize {
-        let mut cursor = self.cursor();
+pub trait PktBuf: Borrow<[u8]> {
+    fn read_slice(&self, pos: usize, dst: &mut [u8]) -> bool {
+        let mut cursor = Cursor::new(self.borrow());
         cursor.set_position(pos as u64);
         match cursor.read(dst) {
-            Ok(bytes) => bytes,
-            _ => 0,
+            Ok(bytes) => (bytes == dst.len()),
+            _ => false,
         }
+    }
+
+    fn read_u8(&self, pos: usize) -> u8 {
+        let mut buf = [0; 1];
+        self.read_slice(pos, &mut buf);
+        buf[0]
+    }
+
+    fn read_u16(&self, pos: usize) -> u16 {
+        let mut buf = [0; 2];
+        self.read_slice(pos, &mut buf);
+        ((buf[0] as u16) << 8 | buf[1] as u16)
     }
 }
 
-pub trait MutPktBuf {
-    fn cursor_mut<'a>(&'a mut self) -> Cursor<&'a mut [u8]>;
-    fn write_slice(&mut self, pos: usize, src: &[u8]) -> usize {
-        let mut cursor = self.cursor_mut();
+pub trait MutPktBuf: BorrowMut<[u8]> {
+    fn write_slice(&mut self, pos: usize, src: &[u8]) -> bool {
+        let mut cursor = Cursor::new(self.borrow_mut());
         cursor.set_position(pos as u64);
-        match cursor.write(src) {
-            Ok(bytes) => bytes,
-            _ => 0,
+        match cursor.write_all(src) {
+            Ok(_v) => true,
+            Err(_e) => false,
         }
     }
-}
 
-impl<'a> PktBuf for &'a [u8] {
-    fn cursor(&self) -> Cursor<&[u8]> {
-        Cursor::new(self)
+    fn write_u8(&mut self, pos: usize, val: u8) -> bool {
+        self.write_slice(pos, &[val])
+    }
+
+    fn write_u16(&mut self, pos: usize, val: u16) -> bool {
+        self.write_slice(pos, &[(val >> 8) as u8, val as u8])
     }
 }
 
-impl<'a> PktBuf for &'a mut [u8] {
-    fn cursor(&self) -> Cursor<&[u8]> {
-        Cursor::new(self)
-    }
-}
-
-impl<'a> MutPktBuf for &'a mut [u8] {
-    fn cursor_mut(&mut self) -> Cursor<&mut [u8]> {
-        Cursor::new(self)
-    }
-}
-
-impl PktBuf for Vec<u8> {
-    fn cursor(&self) -> Cursor<&[u8]> {
-        Cursor::new(&self[..])
-    }
-}
-
-impl MutPktBuf for Vec<u8> {
-    fn cursor_mut(&mut self) -> Cursor<&mut [u8]> {
-        Cursor::new(&mut self[..])
-    }
-}
+impl<T> PktBuf for T where T: Borrow<[u8]> { }
+impl<T> MutPktBuf for T where T: BorrowMut<[u8]> { }
 
 pub trait Header<T> where T: PktBuf {
     fn with_buf(buf: T) -> Self;
@@ -66,12 +58,8 @@ pub trait Header<T> where T: PktBuf {
     fn len(&self) -> usize;
 }
 
-pub trait Pair<'a> {
-    fn pair_iter(&self) -> iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>;
-}
-
-impl<'a> Pair<'a> for &'a [u8] {
-    fn pair_iter(&self) -> iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16> {
+pub trait Pair: Borrow<[u8]> {
+    fn pair_iter<'b>(&'b self) -> iter::Map<slice::Chunks<'b, u8>, fn(&[u8]) -> u16> {
         fn combine(c: &[u8]) -> u16 {
             match c.len() {
                 1 => (c[0] as u16) << 8,
@@ -79,9 +67,11 @@ impl<'a> Pair<'a> for &'a [u8] {
                 _ => 0,
             }
         }
-        self.chunks(2).map(combine)
+        self.borrow().chunks(2).map(combine)
     }
 }
+
+impl<T: ?Sized> Pair for T where T: Borrow<[u8]> { }
 
 pub trait Checksum {
     fn checksum(&mut self) -> u16;

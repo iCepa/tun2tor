@@ -109,9 +109,11 @@ impl<T> Ipv4Header<T> where T: PktBuf {
                            (&'a self,
                             len: usize)
                             -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
-        let bytes = self.buf.cursor().into_inner();
+        let bytes = self.buf.borrow();
         let pseudo = vec![self.proto().value() as u16, len as u16];
-        (&bytes[12..20]).pair_iter().chain(pseudo.into_iter())
+        bytes[12..20]
+            .pair_iter()
+            .chain(pseudo.into_iter())
     }
 
     fn checksum(&self) -> u16 {
@@ -121,42 +123,48 @@ impl<T> Ipv4Header<T> where T: PktBuf {
     }
 
     pub fn checksum_valid(&self) -> bool {
-        let bytes = self.buf.cursor().into_inner();
-        let pre = &bytes[..10];
-        let post = &bytes[12..self.len()];
-        (self.checksum() == pre.pair_iter().chain(post.pair_iter()).checksum())
+        let bytes = self.buf.borrow();
+        (self.checksum() ==
+         bytes[..10]
+             .pair_iter()
+             .chain(bytes[12..self.len()].pair_iter())
+             .checksum())
     }
 }
 
 impl<T> Ipv4Header<T> where T: MutPktBuf, T: PktBuf {
     pub fn initialize(&mut self) {
-        self.buf.write_slice(0, &[(4 << 4 | 5)]); // IP Version and default length
-        self.buf.write_slice(8, &[64]); // TTL
+        self.buf.write_u8(0, 4 << 4 | 5); // IP Version and default length
+        self.set_ttl(64);
+    }
+
+    pub fn set_ttl(&mut self, ttl: u8) {
+        self.buf.write_u8(8, ttl);
     }
 
     pub fn set_src(&mut self, addr: &Ipv4Addr) {
-        self.buf.write_slice(12, &addr.octets()[..]);
+        self.buf.write_slice(12, &addr.octets());
     }
 
     pub fn set_dest(&mut self, addr: &Ipv4Addr) {
-        self.buf.write_slice(16, &addr.octets()[..]);
+        self.buf.write_slice(16, &addr.octets());
     }
 
     pub fn set_total_len(&mut self, len: usize) {
-        self.buf.write_slice(2, &[((len as u16) >> 8) as u8, len as u8]);
+        self.buf.write_u16(2, len as u16);
     }
 
     pub fn set_proto(&mut self, proto: &IpProto) {
-        self.buf.write_slice(9, &[proto.value()]);
+        self.buf.write_u8(9, proto.value());
     }
 
     fn set_checksum(&mut self, checksum: u16) {
-        self.buf.write_slice(10, &[(checksum >> 8) as u8, checksum as u8]);
+        self.buf.write_u16(10, checksum);
     }
 
     pub fn calculate_checksum(&mut self) {
         let checksum = {
-            let bytes = self.buf.cursor().into_inner();
+            let bytes = self.buf.borrow();
             let pre = &bytes[..10];
             let post = &bytes[12..self.len()];
             pre.pair_iter().chain(post.pair_iter()).checksum()
@@ -209,9 +217,11 @@ impl<T> Ipv6Header<T> where T: PktBuf {
                        (&'a self,
                         len: usize)
                         -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
-        let bytes = self.buf.cursor().into_inner();
+        let bytes = self.buf.borrow();
         let pseudo = vec![self.proto().value() as u16, len as u16];
-        (&bytes[8..40]).pair_iter().chain(pseudo.into_iter())
+        bytes[8..40]
+            .pair_iter()
+            .chain(pseudo.into_iter())
     }
 }
 

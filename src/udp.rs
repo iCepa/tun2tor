@@ -64,26 +64,30 @@ impl<T> UdpHeader<T> where T: PktBuf {
                                                                   header: &IpHeader<U>,
                                                                   data: V)
                                                                   -> u16 {
-        let bytes = self.buf.cursor().into_inner();
+        let bytes = self.buf.borrow();
         let pseudo = header.pseudo_iter(self.udp_len());
-        (&bytes[..6]).pair_iter().chain(pseudo).chain(data).checksum()
+        bytes[..6]
+            .pair_iter()
+            .chain(pseudo)
+            .chain(data)
+            .checksum()
     }
 }
 
 impl<T> UdpHeader<T> where T: MutPktBuf, T: PktBuf {
     pub fn set_src(&mut self, src: u16) {
-        self.buf.write_slice(0, &[(src >> 8) as u8, src as u8]);
+        self.buf.write_u16(0, src);
     }
 
     pub fn set_dest(&mut self, dest: u16) {
-        self.buf.write_slice(2, &[(dest >> 8) as u8, dest as u8]);
+        self.buf.write_u16(2, dest);
     }
 
     pub fn set_udp_len(&mut self, len: usize) {
-        self.buf.write_slice(4, &[((len as u16) >> 8) as u8, len as u8]);
+        self.buf.write_u16(4, len as u16);
     }
 
     pub fn set_checksum(&mut self, checksum: u16) {
-        self.buf.write_slice(6, &[(checksum >> 8) as u8, checksum as u8]);
+        self.buf.write_u16(6, checksum);
     }
 }
