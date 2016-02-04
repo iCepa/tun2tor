@@ -22,29 +22,45 @@ impl<T> Header<T> for TcpHeader<T> where T: PktBuf {
     }
 
     fn len(&self) -> usize {
-        let mut len = [0; 1];
-        self.buf.read_slice(12, &mut len);
-        ((len[0] >> 4) * 4) as usize
+        ((self.buf.read_u8(12) >> 4) * 4) as usize
     }
 }
 
 impl<T> TcpHeader<T> where T: PktBuf {
     pub fn src(&self) -> u16 {
-        let mut src = [0; 2];
-        self.buf.read_slice(0, &mut src);
-        ((src[0] as u16) << 8 | src[1] as u16)
+        self.buf.read_u16(0)
     }
 
     pub fn dest(&self) -> u16 {
-        let mut dest = [0; 2];
-        self.buf.read_slice(2, &mut dest);
-        ((dest[0] as u16) << 8 | dest[1] as u16)
+        self.buf.read_u16(2)
+    }
+
+    pub fn seq_num(&self) -> u32 {
+        self.buf.read_u32(4)
+    }
+
+    pub fn ack_num(&self) -> u32 {
+        self.buf.read_u32(8)
+    }
+
+    fn options(&self) -> u8 {
+        self.buf.read_u8(9)
+    }
+
+    pub fn is_syn(&self) -> bool {
+        (self.options() & 0x2) == 0x2
+    }
+
+    pub fn is_ack(&self) -> bool {
+        (self.options() & 0x10) == 0x10
+    }
+
+    pub fn is_fin(&self) -> bool {
+        (self.options() & 0x1) == 0x1
     }
 
     fn checksum(&self) -> u16 {
-        let mut checksum = [0; 2];
-        self.buf.read_slice(16, &mut checksum);
-        ((checksum[0] as u16) << 8 | checksum[1] as u16)
+        self.buf.read_u16(16)
     }
 
     pub fn checksum_valid<U: PktBuf, V: Iterator<Item = u16>>(&self,

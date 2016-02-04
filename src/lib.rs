@@ -1,6 +1,11 @@
 #![deny(unsafe_code,
+        dead_code,
         unstable_features,
         unused_extern_crates,
+        unused_imports,
+        unused_features,
+        unused_assignments,
+        unused_variables,
         unused_import_braces,
         unused_qualifications,
         warnings,
@@ -9,7 +14,6 @@
         trivial_numeric_casts)]
 
 extern crate libc;
-extern crate mio;
 
 #[macro_use]
 mod result;

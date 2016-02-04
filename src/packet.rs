@@ -7,8 +7,8 @@ pub trait PktBuf: Borrow<[u8]> {
     fn read_slice(&self, pos: usize, dst: &mut [u8]) -> bool {
         let mut cursor = Cursor::new(self.borrow());
         cursor.set_position(pos as u64);
-        match cursor.read(dst) {
-            Ok(bytes) => (bytes == dst.len()),
+        match cursor.read_exact(dst) {
+            Ok(()) => true,
             _ => false,
         }
     }
@@ -23,6 +23,12 @@ pub trait PktBuf: Borrow<[u8]> {
         let mut buf = [0; 2];
         self.read_slice(pos, &mut buf);
         ((buf[0] as u16) << 8 | buf[1] as u16)
+    }
+
+    fn read_u32(&self, pos: usize) -> u32 {
+        let mut buf = [0; 4];
+        self.read_slice(pos, &mut buf);
+        ((buf[0] as u32) << 24 | (buf[1] as u32) << 16 | (buf[2] as u32) << 8 | buf[3] as u32)
     }
 }
 

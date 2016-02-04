@@ -26,21 +26,15 @@ impl<T> Header<T> for UdpHeader<T> where T: PktBuf {
 
 impl<T> UdpHeader<T> where T: PktBuf {
     pub fn src(&self) -> u16 {
-        let mut src = [0; 2];
-        self.buf.read_slice(0, &mut src);
-        ((src[0] as u16) << 8 | src[1] as u16)
+        self.buf.read_u16(0)
     }
 
     pub fn dest(&self) -> u16 {
-        let mut dest = [0; 2];
-        self.buf.read_slice(2, &mut dest);
-        ((dest[0] as u16) << 8 | dest[1] as u16)
+        self.buf.read_u16(2)
     }
 
     pub fn udp_len(&self) -> usize {
-        let mut len = [0; 2];
-        self.buf.read_slice(4, &mut len);
-        ((len[0] as u16) << 8 | len[1] as u16) as usize
+        self.buf.read_u16(4) as usize
     }
 
     pub fn data_len(&self) -> usize {
@@ -48,9 +42,7 @@ impl<T> UdpHeader<T> where T: PktBuf {
     }
 
     fn checksum(&self) -> u16 {
-        let mut checksum = [0; 2];
-        self.buf.read_slice(6, &mut checksum);
-        ((checksum[0] as u16) << 8 | checksum[1] as u16)
+        self.buf.read_u16(6)
     }
 
     pub fn checksum_valid<U: PktBuf, V: Iterator<Item = u16>>(&self,
