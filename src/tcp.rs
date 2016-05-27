@@ -8,7 +8,9 @@ pub struct TcpHeader<T: PktBuf> {
     buf: T,
 }
 
-impl<T> Header<T> for TcpHeader<T> where T: PktBuf {
+impl<T> Header<T> for TcpHeader<T>
+    where T: PktBuf
+{
     fn with_buf(buf: T) -> TcpHeader<T> {
         TcpHeader { buf: buf }
     }
@@ -26,7 +28,9 @@ impl<T> Header<T> for TcpHeader<T> where T: PktBuf {
     }
 }
 
-impl<T> TcpHeader<T> where T: PktBuf {
+impl<T> TcpHeader<T>
+    where T: PktBuf
+{
     pub fn src(&self) -> u16 {
         self.buf.read_u16(0)
     }
@@ -85,7 +89,10 @@ impl<T> TcpHeader<T> where T: PktBuf {
     }
 }
 
-impl<T> TcpHeader<T> where T: MutPktBuf, T: PktBuf {
+impl<T> TcpHeader<T>
+    where T: MutPktBuf,
+          T: PktBuf
+{
     pub fn set_src(&mut self, src: u16) {
         self.buf.write_u16(0, src);
     }

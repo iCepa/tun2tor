@@ -33,15 +33,15 @@ pub struct Greeting<'a> {
 impl<'a> Greeting<'a> {
     pub fn write_to<W: Write + Sized>(&self, stream: &mut W) -> Result<()> {
         let mut methods = self.methods
-                              .iter()
-                              .map(|m| {
-                                  match *m {
-                                      AuthMethod::None => SOCKS5_AUTH_METHOD_NONE,
-                                      AuthMethod::GSSAPI => SOCKS5_AUTH_METHOD_GSSAPI,
-                                      AuthMethod::Password => SOCKS5_AUTH_METHOD_PASSWORD,
-                                  }
-                              })
-                              .collect::<Vec<u8>>();
+            .iter()
+            .map(|m| {
+                match *m {
+                    AuthMethod::None => SOCKS5_AUTH_METHOD_NONE,
+                    AuthMethod::GSSAPI => SOCKS5_AUTH_METHOD_GSSAPI,
+                    AuthMethod::Password => SOCKS5_AUTH_METHOD_PASSWORD,
+                }
+            })
+            .collect::<Vec<u8>>();
         methods.dedup();
         try!((Version::V5).write_to(stream));
         try!(stream.write_all(&[methods.len() as u8]));

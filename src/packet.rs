@@ -51,10 +51,12 @@ pub trait MutPktBuf: BorrowMut<[u8]> {
     }
 }
 
-impl<T> PktBuf for T where T: Borrow<[u8]> { }
-impl<T> MutPktBuf for T where T: BorrowMut<[u8]> { }
+impl<T> PktBuf for T where T: Borrow<[u8]> {}
+impl<T> MutPktBuf for T where T: BorrowMut<[u8]> {}
 
-pub trait Header<T> where T: PktBuf {
+pub trait Header<T>
+    where T: PktBuf
+{
     fn with_buf(buf: T) -> Self;
     fn into_buf(self) -> T;
 
@@ -77,13 +79,15 @@ pub trait Pair: Borrow<[u8]> {
     }
 }
 
-impl<T: ?Sized> Pair for T where T: Borrow<[u8]> { }
+impl<T: ?Sized> Pair for T where T: Borrow<[u8]> {}
 
 pub trait Checksum {
     fn checksum(&mut self) -> u16;
 }
 
-impl<T> Checksum for T where T: Iterator<Item=u16> {
+impl<T> Checksum for T
+    where T: Iterator<Item = u16>
+{
     fn checksum(&mut self) -> u16 {
         !self.fold(0, |a, b| {
             let mut folded = (a as u32) + (b as u32);

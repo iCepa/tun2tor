@@ -90,7 +90,7 @@ impl IpHandler for Arc<Mutex<TunIf>> {
                         udp_hdr.len()
                     };
                     let (data_len, _addr) = try_log!(socket.recv_from(&mut buf[ip_len +
-                                                                               udp_len..]));
+                                                                      udp_len..]));
 
                     let total_len = ip_len + udp_len + data_len;
                     {

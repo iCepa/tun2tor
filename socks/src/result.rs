@@ -41,16 +41,19 @@ impl fmt::Display for Error {
             Error::SOCKSVersionNotSupported => write!(f, "Unknown SOCKS version"),
             Error::CommandNotSupported => write!(f, "Command is not supported by SOCKS version"),
             Error::AddrNotSupported => write!(f, "Address is not supported by SOCKS version"),
-            Error::AuthMethodNotSupported =>
+            Error::AuthMethodNotSupported => {
                 write!(f,
-                       "Auth method is not supported by SOCKS version or SOCKS server"),
+                       "Auth method is not supported by SOCKS version or SOCKS server")
+            }
             Error::ResponseInvalid => write!(f, "The response returned from the server is invalid"),
             Error::StatusInvalid => write!(f, "The status returned from the server is invalid"),
             Error::TTLExpired => write!(f, "The TTL expired in transit"),
-            Error::IdentDNotRunning =>
-                write!(f, "The SOCKS server cannot connect to identd on the client"),
-            Error::IdentDInvalidUserID =>
-                write!(f, "The client program and identd report different user-ids"),
+            Error::IdentDNotRunning => {
+                write!(f, "The SOCKS server cannot connect to identd on the client")
+            }
+            Error::IdentDInvalidUserID => {
+                write!(f, "The client program and identd report different user-ids")
+            }
         }
     }
 }
@@ -63,8 +66,9 @@ impl error::Error for Error {
             Error::SOCKSVersionNotSupported => "Unknown SOCKS version",
             Error::CommandNotSupported => "Command is not supported by SOCKS version",
             Error::AddrNotSupported => "Address is not supported by SOCKS version",
-            Error::AuthMethodNotSupported =>
-                "Auth method is not supported by SOCKS version or SOCKS server",
+            Error::AuthMethodNotSupported => {
+                "Auth method is not supported by SOCKS version or SOCKS server"
+            }
             Error::ResponseInvalid => "The response returned from the server is invalid",
             Error::StatusInvalid => "The status returned from the server is invalid",
             Error::TTLExpired => "The TTL expired in transit",

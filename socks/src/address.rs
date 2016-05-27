@@ -51,10 +51,8 @@ impl Address {
 
                 match type_buf[0] {
                     SOCKS5_ADDR_TYPE_IPV4 => {
-                        let addr = Ipv4Addr::new(addr_buf[0],
-                                                 addr_buf[1],
-                                                 addr_buf[2],
-                                                 addr_buf[3]);
+                        let addr =
+                            Ipv4Addr::new(addr_buf[0], addr_buf[1], addr_buf[2], addr_buf[3]);
                         Ok(Address::V4(SocketAddrV4::new(addr, port)))
                     }
                     SOCKS5_ADDR_TYPE_IPV6 => unimplemented!(),

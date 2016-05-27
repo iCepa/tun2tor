@@ -48,17 +48,19 @@ pub unsafe extern "C" fn tunif_set_packet_callback(tunif: *mut Arc<Mutex<TunIf>>
     let ptr: usize = mem::transmute(tunif);
     let context: usize = mem::transmute(context);
     (*tunif).set_packet_callback(match cb {
-        Some(cb) => Some(Box::new(move |packet, version| {
-            let tunif: *mut Arc<Mutex<TunIf>> = mem::transmute(ptr);
-            let context: *mut c_void = mem::transmute(context);
-            let bytes: *const c_void = mem::transmute(&packet[0]);
-            let len = packet.len();
-            let proto = match version {
-                6 => AF_INET6 as c_char,
-                _ => AF_INET as c_char,
-            };
-            cb(tunif, context, bytes, len, proto);
-        })),
+        Some(cb) => {
+            Some(Box::new(move |packet, version| {
+                let tunif: *mut Arc<Mutex<TunIf>> = mem::transmute(ptr);
+                let context: *mut c_void = mem::transmute(context);
+                let bytes: *const c_void = mem::transmute(&packet[0]);
+                let len = packet.len();
+                let proto = match version {
+                    6 => AF_INET6 as c_char,
+                    _ => AF_INET as c_char,
+                };
+                cb(tunif, context, bytes, len, proto);
+            }))
+        }
         _ => None,
     });
 }

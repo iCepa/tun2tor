@@ -45,8 +45,9 @@ impl Response {
             Version::V4 => {
                 match buf[1] {
                     SOCKS4_STATUS_GRANTED => None,
-                    SOCKS4_STATUS_FAILED =>
-                        Some(Error::Io(io::Error::new(io::ErrorKind::Other, "Connection failed"))),
+                    SOCKS4_STATUS_FAILED => {
+                        Some(Error::Io(io::Error::new(io::ErrorKind::Other, "Connection failed")))
+                    }
                     SOCKS4_STATUS_NOT_RUNNING_IDENTD => Some(Error::IdentDNotRunning),
                     SOCKS4_STATUS_INCORRECT_USER_ID => Some(Error::IdentDInvalidUserID),
                     _ => return Err(Error::StatusInvalid),
@@ -55,17 +56,22 @@ impl Response {
             Version::V5 => {
                 match buf[1] {
                     SOCKS5_STATUS_GRANTED => None,
-                    SOCKS5_STATUS_FAILED =>
-                        Some(Error::Io(io::Error::new(io::ErrorKind::Other, "Connection failed"))),
-                    SOCKS5_STATUS_NOT_ALLOWED =>
+                    SOCKS5_STATUS_FAILED => {
+                        Some(Error::Io(io::Error::new(io::ErrorKind::Other, "Connection failed")))
+                    }
+                    SOCKS5_STATUS_NOT_ALLOWED => {
                         Some(Error::Io(io::Error::new(io::ErrorKind::PermissionDenied,
-                                                      "Connection not allowed by ruleset"))),
-                    SOCKS5_STATUS_NETWORK_UNREACHABLE =>
-                        Some(Error::Io(io::Error::from_raw_os_error(ENETUNREACH))),
-                    SOCKS5_STATUS_HOST_UNREACHABLE =>
-                        Some(Error::Io(io::Error::from_raw_os_error(EHOSTUNREACH))),
-                    SOCKS5_STATUS_REFUSED =>
-                        Some(Error::Io(io::Error::from_raw_os_error(ECONNREFUSED))),
+                                                      "Connection not allowed by ruleset")))
+                    }
+                    SOCKS5_STATUS_NETWORK_UNREACHABLE => {
+                        Some(Error::Io(io::Error::from_raw_os_error(ENETUNREACH)))
+                    }
+                    SOCKS5_STATUS_HOST_UNREACHABLE => {
+                        Some(Error::Io(io::Error::from_raw_os_error(EHOSTUNREACH)))
+                    }
+                    SOCKS5_STATUS_REFUSED => {
+                        Some(Error::Io(io::Error::from_raw_os_error(ECONNREFUSED)))
+                    }
                     SOCKS5_STATUS_TTL_EXPIRED => Some(Error::TTLExpired),
                     SOCKS5_STATUS_COMMAND_NOT_SUPPORTED => Some(Error::CommandNotSupported),
                     SOCKS5_STATUS_ADDRESS_NOT_SUPPORTED => Some(Error::AddrNotSupported),

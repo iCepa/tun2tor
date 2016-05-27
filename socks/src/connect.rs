@@ -25,7 +25,9 @@ pub trait Connect {
                      -> Result<Address>;
 }
 
-impl<T> Connect for T where T: Read + Write {
+impl<T> Connect for T
+    where T: Read + Write
+{
     fn socks_command(&mut self,
                      command: Command,
                      version: Version,

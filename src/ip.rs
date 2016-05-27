@@ -59,7 +59,9 @@ pub struct Ipv4Header<T: PktBuf> {
     buf: T,
 }
 
-impl<T> Header<T> for Ipv4Header<T> where T: PktBuf {
+impl<T> Header<T> for Ipv4Header<T>
+    where T: PktBuf
+{
     fn with_buf(buf: T) -> Ipv4Header<T> {
         Ipv4Header { buf: buf }
     }
@@ -79,7 +81,9 @@ impl<T> Header<T> for Ipv4Header<T> where T: PktBuf {
     }
 }
 
-impl<T> Ipv4Header<T> where T: PktBuf {
+impl<T> Ipv4Header<T>
+    where T: PktBuf
+{
     pub fn src(&self) -> Ipv4Addr {
         let mut src = [0; 4];
         self.buf.read_slice(12, &mut src);
@@ -105,9 +109,9 @@ impl<T> Ipv4Header<T> where T: PktBuf {
     }
 
     pub fn pseudo_iter<'a>
-                           (&'a self,
-                            len: usize)
-                            -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
+        (&'a self,
+         len: usize)
+         -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
         let bytes = self.buf.borrow();
         let pseudo = vec![self.proto().value() as u16, len as u16];
         bytes[12..20]
@@ -125,13 +129,16 @@ impl<T> Ipv4Header<T> where T: PktBuf {
         let bytes = self.buf.borrow();
         (self.checksum() ==
          bytes[..10]
-             .pair_iter()
-             .chain(bytes[12..self.len()].pair_iter())
-             .checksum())
+            .pair_iter()
+            .chain(bytes[12..self.len()].pair_iter())
+            .checksum())
     }
 }
 
-impl<T> Ipv4Header<T> where T: MutPktBuf, T: PktBuf {
+impl<T> Ipv4Header<T>
+    where T: MutPktBuf,
+          T: PktBuf
+{
     pub fn initialize(&mut self) {
         self.buf.write_u8(0, 4 << 4 | 5); // IP Version and default length
         self.set_ttl(64);
@@ -177,7 +184,9 @@ pub struct Ipv6Header<T: PktBuf> {
     buf: T,
 }
 
-impl<T> Header<T> for Ipv6Header<T> where T: PktBuf {
+impl<T> Header<T> for Ipv6Header<T>
+    where T: PktBuf
+{
     fn with_buf(buf: T) -> Ipv6Header<T> {
         Ipv6Header { buf: buf }
     }
@@ -195,7 +204,9 @@ impl<T> Header<T> for Ipv6Header<T> where T: PktBuf {
     }
 }
 
-impl<T> Ipv6Header<T> where T: PktBuf {
+impl<T> Ipv6Header<T>
+    where T: PktBuf
+{
     pub fn src(&self) -> Ipv6Addr {
         unimplemented!();
     }
@@ -213,9 +224,9 @@ impl<T> Ipv6Header<T> where T: PktBuf {
     }
 
     fn pseudo_iter<'a>
-                       (&'a self,
-                        len: usize)
-                        -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
+        (&'a self,
+         len: usize)
+         -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
         let bytes = self.buf.borrow();
         let pseudo = vec![self.proto().value() as u16, len as u16];
         bytes[8..40]
@@ -224,7 +235,10 @@ impl<T> Ipv6Header<T> where T: PktBuf {
     }
 }
 
-impl<T> Ipv6Header<T> where T: MutPktBuf, T: PktBuf {
+impl<T> Ipv6Header<T>
+    where T: MutPktBuf,
+          T: PktBuf
+{
     pub fn initialize(&mut self) {
         unimplemented!();
     }
@@ -252,7 +266,9 @@ pub enum IpHeader<T: PktBuf> {
     V6(Ipv6Header<T>),
 }
 
-impl<T> IpHeader<T> where T: PktBuf {
+impl<T> IpHeader<T>
+    where T: PktBuf
+{
     pub fn with_buf(buf: T) -> Result<IpHeader<T>> {
         let mut version = [0; 1];
         buf.read_slice(0, &mut version);
@@ -299,9 +315,9 @@ impl<T> IpHeader<T> where T: PktBuf {
     }
 
     pub fn pseudo_iter<'a>
-                           (&'a self,
-                            len: usize)
-                            -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
+        (&'a self,
+         len: usize)
+         -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
         match *self {
             IpHeader::V4(ref h) => h.pseudo_iter(len),
             IpHeader::V6(ref h) => h.pseudo_iter(len),
@@ -323,7 +339,10 @@ impl<T> IpHeader<T> where T: PktBuf {
     }
 }
 
-impl<T> IpHeader<T> where T: MutPktBuf, T: PktBuf {
+impl<T> IpHeader<T>
+    where T: MutPktBuf,
+          T: PktBuf
+{
     pub fn with_buf_hint(buf: T, addr: &IpAddr) -> IpHeader<T> {
         match *addr {
             IpAddr::V4(ref _a) => IpHeader::V4(Ipv4Header::with_buf(buf)),
