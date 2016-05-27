@@ -87,13 +87,13 @@ impl<T> Ipv4Header<T>
     pub fn src(&self) -> Ipv4Addr {
         let mut src = [0; 4];
         self.buf.read_slice(12, &mut src);
-        Ipv4Addr::new(src[0], src[1], src[2], src[3])
+        Ipv4Addr::from(src)
     }
 
     pub fn dest(&self) -> Ipv4Addr {
         let mut dest = [0; 4];
         self.buf.read_slice(16, &mut dest);
-        Ipv4Addr::new(dest[0], dest[1], dest[2], dest[3])
+        Ipv4Addr::from(dest)
     }
 
     pub fn total_len(&self) -> usize {
