@@ -1,17 +1,13 @@
-extern crate ip;
-
 use std::fmt;
 use std::iter;
 use std::slice;
 use std::vec;
 use std::io::Read;
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::net::{Ipv4Addr, Ipv6Addr, IpAddr};
 use std::iter::Iterator;
 
 use result::{Result, Error};
 use packet::{PktBuf, MutPktBuf, Header, Pair, Checksum};
-
-pub use self::ip::IpAddr;
 
 pub enum IpProto {
     Icmp,
