@@ -15,13 +15,13 @@ pub struct Request<'a> {
 }
 
 impl<'a> Request<'a> {
-    pub fn write_to<W: Write + Sized>(&self, stream: &mut W) -> Result<()> {
+    pub fn write_to<W: Write>(&self, stream: &mut W) -> Result<()> {
         try!(self.version.write_to(stream));
-        try!(self.command.write_to(stream, &self.version));
+        try!(self.command.write_to(stream, self.version));
         if self.version == Version::V5 {
             try!(stream.write_all(&[0]));
         }
-        try!(self.address.write_to(stream, &self.version, self.user_id));
+        try!(self.address.write_to(stream, self.version, self.user_id));
         Ok(())
     }
 }

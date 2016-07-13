@@ -4,12 +4,12 @@ use packet::{PktBuf, MutPktBuf, Header, Pair, Checksum};
 use ip::IpHeader;
 
 #[derive(Debug)]
-pub struct TcpHeader<T: PktBuf> {
+pub struct TcpHeader<T: AsRef<[u8]>> {
     buf: T,
 }
 
 impl<T> Header<T> for TcpHeader<T>
-    where T: PktBuf
+    where T: AsRef<[u8]>
 {
     fn with_buf(buf: T) -> TcpHeader<T> {
         TcpHeader { buf: buf }
@@ -29,7 +29,7 @@ impl<T> Header<T> for TcpHeader<T>
 }
 
 impl<T> TcpHeader<T>
-    where T: PktBuf
+    where T: AsRef<[u8]>
 {
     pub fn src(&self) -> u16 {
         self.buf.read_u16(0)
@@ -67,18 +67,18 @@ impl<T> TcpHeader<T>
         self.buf.read_u16(16)
     }
 
-    pub fn checksum_valid<U: PktBuf, V: Iterator<Item = u16>>(&self,
-                                                              header: &IpHeader<U>,
-                                                              data: V)
-                                                              -> bool {
+    pub fn checksum_valid<U: AsRef<[u8]>, V: Iterator<Item = u16>>(&self,
+                                                                   header: &IpHeader<U>,
+                                                                   data: V)
+                                                                   -> bool {
         (self.checksum() == self.calculate_checksum(header, data))
     }
 
-    pub fn calculate_checksum<U: PktBuf, V: Iterator<Item = u16>>(&self,
-                                                                  header: &IpHeader<U>,
-                                                                  data: V)
-                                                                  -> u16 {
-        let bytes = self.buf.borrow();
+    pub fn calculate_checksum<U: AsRef<[u8]>, V: Iterator<Item = u16>>(&self,
+                                                                       header: &IpHeader<U>,
+                                                                       data: V)
+                                                                       -> u16 {
+        let bytes = self.buf.as_ref();
         let pseudo = header.pseudo_iter(header.total_len() - header.len());
         bytes[..16]
             .pair_iter()
@@ -90,8 +90,8 @@ impl<T> TcpHeader<T>
 }
 
 impl<T> TcpHeader<T>
-    where T: MutPktBuf,
-          T: PktBuf
+    where T: AsRef<[u8]>,
+          T: AsMut<[u8]>
 {
     pub fn set_src(&mut self, src: u16) {
         self.buf.write_u16(0, src);

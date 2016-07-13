@@ -6,7 +6,7 @@ use result::{Result, Error};
 const SOCKS4_VERSION: u8 = 0x04;
 const SOCKS5_VERSION: u8 = 0x05;
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Version {
     V4,
     V5,

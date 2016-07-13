@@ -2,7 +2,6 @@ use std::fmt;
 use std::iter;
 use std::slice;
 use std::vec;
-use std::io::Read;
 use std::net::{Ipv4Addr, Ipv6Addr, IpAddr};
 use std::iter::Iterator;
 
@@ -55,12 +54,12 @@ impl fmt::Debug for IpProto {
 }
 
 #[derive(Debug)]
-pub struct Ipv4Header<T: PktBuf> {
+pub struct Ipv4Header<T: AsRef<[u8]>> {
     buf: T,
 }
 
 impl<T> Header<T> for Ipv4Header<T>
-    where T: PktBuf
+    where T: AsRef<[u8]>
 {
     fn with_buf(buf: T) -> Ipv4Header<T> {
         Ipv4Header { buf: buf }
@@ -82,7 +81,7 @@ impl<T> Header<T> for Ipv4Header<T>
 }
 
 impl<T> Ipv4Header<T>
-    where T: PktBuf
+    where T: AsRef<[u8]>
 {
     pub fn src(&self) -> Ipv4Addr {
         let mut src = [0; 4];
@@ -112,7 +111,7 @@ impl<T> Ipv4Header<T>
         (&'a self,
          len: usize)
          -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
-        let bytes = self.buf.borrow();
+        let bytes = self.buf.as_ref();
         let pseudo = vec![self.proto().value() as u16, len as u16];
         bytes[12..20]
             .pair_iter()
@@ -126,7 +125,7 @@ impl<T> Ipv4Header<T>
     }
 
     pub fn checksum_valid(&self) -> bool {
-        let bytes = self.buf.borrow();
+        let bytes = self.buf.as_ref();
         (self.checksum() ==
          bytes[..10]
             .pair_iter()
@@ -136,8 +135,8 @@ impl<T> Ipv4Header<T>
 }
 
 impl<T> Ipv4Header<T>
-    where T: MutPktBuf,
-          T: PktBuf
+    where T: AsRef<[u8]>,
+          T: AsMut<[u8]>
 {
     pub fn initialize(&mut self) {
         self.buf.write_u8(0, 4 << 4 | 5); // IP Version and default length
@@ -170,7 +169,7 @@ impl<T> Ipv4Header<T>
 
     pub fn calculate_checksum(&mut self) {
         let checksum = {
-            let bytes = self.buf.borrow();
+            let bytes = self.buf.as_ref();
             let pre = &bytes[..10];
             let post = &bytes[12..self.len()];
             pre.pair_iter().chain(post.pair_iter()).checksum()
@@ -180,12 +179,12 @@ impl<T> Ipv4Header<T>
 }
 
 #[derive(Debug)]
-pub struct Ipv6Header<T: PktBuf> {
+pub struct Ipv6Header<T: AsRef<[u8]>> {
     buf: T,
 }
 
 impl<T> Header<T> for Ipv6Header<T>
-    where T: PktBuf
+    where T: AsRef<[u8]>
 {
     fn with_buf(buf: T) -> Ipv6Header<T> {
         Ipv6Header { buf: buf }
@@ -205,7 +204,7 @@ impl<T> Header<T> for Ipv6Header<T>
 }
 
 impl<T> Ipv6Header<T>
-    where T: PktBuf
+    where T: AsRef<[u8]>
 {
     pub fn src(&self) -> Ipv6Addr {
         unimplemented!();
@@ -227,7 +226,7 @@ impl<T> Ipv6Header<T>
         (&'a self,
          len: usize)
          -> iter::Chain<iter::Map<slice::Chunks<'a, u8>, fn(&[u8]) -> u16>, vec::IntoIter<u16>> {
-        let bytes = self.buf.borrow();
+        let bytes = self.buf.as_ref();
         let pseudo = vec![self.proto().value() as u16, len as u16];
         bytes[8..40]
             .pair_iter()
@@ -236,8 +235,8 @@ impl<T> Ipv6Header<T>
 }
 
 impl<T> Ipv6Header<T>
-    where T: MutPktBuf,
-          T: PktBuf
+    where T: AsRef<[u8]>,
+          T: AsMut<[u8]>
 {
     pub fn initialize(&mut self) {
         unimplemented!();
@@ -261,13 +260,13 @@ impl<T> Ipv6Header<T>
 }
 
 #[derive(Debug)]
-pub enum IpHeader<T: PktBuf> {
+pub enum IpHeader<T: AsRef<[u8]>> {
     V4(Ipv4Header<T>),
     V6(Ipv6Header<T>),
 }
 
 impl<T> IpHeader<T>
-    where T: PktBuf
+    where T: AsRef<[u8]>
 {
     pub fn with_buf(buf: T) -> Result<IpHeader<T>> {
         let mut version = [0; 1];
@@ -340,8 +339,7 @@ impl<T> IpHeader<T>
 }
 
 impl<T> IpHeader<T>
-    where T: MutPktBuf,
-          T: PktBuf
+    where T: AsRef<[u8]>
 {
     pub fn with_buf_hint(buf: T, addr: &IpAddr) -> IpHeader<T> {
         match *addr {
@@ -349,7 +347,12 @@ impl<T> IpHeader<T>
             IpAddr::V6(ref _a) => IpHeader::V6(Ipv6Header::with_buf(buf)),
         }
     }
+}
 
+impl<T> IpHeader<T>
+    where T: AsRef<[u8]>,
+          T: AsMut<[u8]>
+{
     pub fn initialize(&mut self) {
         match *self {
             IpHeader::V4(ref mut h) => h.initialize(),

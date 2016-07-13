@@ -8,7 +8,7 @@ const SOCKS5_AUTH_METHOD_NONE: u8 = 0x00;
 const SOCKS5_AUTH_METHOD_GSSAPI: u8 = 0x01;
 const SOCKS5_AUTH_METHOD_PASSWORD: u8 = 0x02;
 
-#[derive(PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum AuthMethod {
     None,
     GSSAPI,

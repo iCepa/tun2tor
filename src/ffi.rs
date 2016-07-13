@@ -13,6 +13,15 @@ use libc::{c_void, c_char, size_t, AF_INET, AF_INET6};
 
 use tunif::{TunIf, IpHandler};
 
+/// A callback that is called every time a packet
+/// is received over the interface
+pub type PktCallback = extern "C" fn(*mut Arc<Mutex<TunIf>>,
+                                     *mut c_void,
+                                     *const c_void,
+                                     size_t,
+                                     c_char)
+                                     -> c_void;
+
 /// Creates a new tunnel interface and returns a pointer to it
 /// ```c
 /// tunif *interface = tunif_new();
@@ -44,7 +53,7 @@ pub unsafe extern "C" fn tunif_input_packet(tunif: *mut Arc<Mutex<TunIf>>,
 #[no_mangle]
 pub unsafe extern "C" fn tunif_set_packet_callback(tunif: *mut Arc<Mutex<TunIf>>,
                                                    context: *mut c_void,
-                                                   cb: Option<extern "C" fn(*mut Arc<Mutex<TunIf>>, *mut c_void, *const c_void, size_t, c_char) -> c_void>) {
+                                                   cb: Option<PktCallback>) {
     let ptr: usize = mem::transmute(tunif);
     let context: usize = mem::transmute(context);
     (*tunif).set_packet_callback(match cb {

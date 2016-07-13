@@ -9,8 +9,7 @@ const SOCKS5_ADDR_TYPE_IPV4: u8 = 0x01;
 const SOCKS5_ADDR_TYPE_DOMAIN_NAME: u8 = 0x03;
 const SOCKS5_ADDR_TYPE_IPV6: u8 = 0x04;
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Address {
     V4(SocketAddrV4),
     V6(SocketAddrV6),
@@ -18,8 +17,8 @@ pub enum Address {
 }
 
 impl Address {
-    pub fn read_from<R: Read + Sized>(stream: &mut R, version: &Version) -> Result<Self> {
-        match *version {
+    pub fn read_from<R: Read>(stream: &mut R, version: Version) -> Result<Self> {
+        match version {
             Version::V4 => {
                 let mut buf = Vec::new();
                 try!(stream.take(6).read_to_end(&mut buf));
@@ -66,12 +65,12 @@ impl Address {
         }
     }
 
-    pub fn write_to<W: Write + Sized>(&self,
-                                      stream: &mut W,
-                                      version: &Version,
-                                      user_id: Option<&str>)
-                                      -> Result<()> {
-        match *version {
+    pub fn write_to<W: Write>(&self,
+                              stream: &mut W,
+                              version: Version,
+                              user_id: Option<&str>)
+                              -> Result<()> {
+        match version {
             Version::V4 => {
                 let port = match *self {
                     Address::V4(addr) => addr.port(),

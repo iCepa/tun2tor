@@ -3,6 +3,7 @@
 use std::thread;
 use std::fmt;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use std::net::UdpSocket;
 
 use result::{Result, Error};
@@ -68,11 +69,15 @@ impl IpHandler for Arc<Mutex<TunIf>> {
                 let dest_port = udp_hdr.dest();
 
                 thread::spawn(move || {
+                    // TODO: Allow configuration of DNSPort
                     let socket = try_log!(UdpSocket::bind("127.0.0.1:0"));
-                    try_log!(socket.send_to(&*bytes, "127.0.0.1:12345")); // TODO: Allow configuration of DNSPort
+                    try_log!(socket.set_write_timeout(Some(Duration::from_secs(5))));
+                    try_log!(socket.set_read_timeout(Some(Duration::from_secs(5))));
+                    try_log!(socket.send_to(&*bytes, "127.0.0.1:12345"));
                     drop(bytes);
 
-                    let mut buf = [0; 512 + 60 + 8]; // TODO: Use max_len() when converted to associated constants
+                    // TODO: Use max_len() when converted to associated constants
+                    let mut buf = [0; 512 + 60 + 8];
 
                     let (ip_len, ip_ver) = {
                         let mut ip_hdr = IpHeader::with_buf_hint(&mut buf[..], &src_ip);
@@ -118,7 +123,8 @@ impl IpHandler for Arc<Mutex<TunIf>> {
                 let tcp_hdr = TcpHeader::with_buf(payload);
                 let data = &packet[ip_hdr.len() + tcp_hdr.len()..ip_hdr.total_len()];
                 if !tcp_hdr.checksum_valid(&ip_hdr, data.pair_iter()) {
-                    return Err(Error::IPChecksumInvalid); // TODO: Make into TCPP specific error
+                    // TODO: Make into TCP specific error
+                    return Err(Error::IPChecksumInvalid);
                 }
 
                 // TODO: Do something with the packet
@@ -129,7 +135,7 @@ impl IpHandler for Arc<Mutex<TunIf>> {
     }
 
     fn output_packet(&self, packet: &[u8], proto: u8) {
-        match (*self).lock().unwrap().pkt_cb {
+        match self.lock().unwrap().pkt_cb {
             Some(ref cb) => cb(packet, proto),
             None => (),
         }

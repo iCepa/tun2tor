@@ -11,8 +11,7 @@ const SOCKS_CMD_UDP_ASSOCIATE: u8 = 0x03;
 const SOCKS_TOR_CMD_RESOLVE: u8 = 0xF0;
 const SOCKS_TOR_CMD_RESOLVE_PTR: u8 = 0xF1;
 
-#[derive(PartialEq)]
-#[allow(dead_code)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Command {
     TcpConnect,
     TcpBind,
@@ -34,8 +33,8 @@ impl fmt::Debug for Command {
 }
 
 impl Command {
-    pub fn write_to<W: Write + Sized>(&self, stream: &mut W, version: &Version) -> Result<()> {
-        if *version == Version::V4 && *self == Command::UdpAssociate {
+    pub fn write_to<W: Write>(&self, stream: &mut W, version: Version) -> Result<()> {
+        if version == Version::V4 && *self == Command::UdpAssociate {
             return Err(Error::CommandNotSupported);
         }
         let v = match *self {

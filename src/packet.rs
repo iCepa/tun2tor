@@ -1,11 +1,11 @@
 use std::iter;
 use std::slice;
 use std::io::{Cursor, Read, Write};
-use std::borrow::{Borrow, BorrowMut};
+use std::convert::{AsRef, AsMut};
 
-pub trait PktBuf: Borrow<[u8]> {
+pub trait PktBuf: AsRef<[u8]> {
     fn read_slice(&self, pos: usize, dst: &mut [u8]) -> bool {
-        let mut cursor = Cursor::new(self.borrow());
+        let mut cursor = Cursor::new(self.as_ref());
         cursor.set_position(pos as u64);
         match cursor.read_exact(dst) {
             Ok(()) => true,
@@ -32,9 +32,9 @@ pub trait PktBuf: Borrow<[u8]> {
     }
 }
 
-pub trait MutPktBuf: BorrowMut<[u8]> {
+pub trait MutPktBuf: AsMut<[u8]> {
     fn write_slice(&mut self, pos: usize, src: &[u8]) -> bool {
-        let mut cursor = Cursor::new(self.borrow_mut());
+        let mut cursor = Cursor::new(self.as_mut());
         cursor.set_position(pos as u64);
         match cursor.write_all(src) {
             Ok(_v) => true,
@@ -51,11 +51,11 @@ pub trait MutPktBuf: BorrowMut<[u8]> {
     }
 }
 
-impl<T> PktBuf for T where T: Borrow<[u8]> {}
-impl<T> MutPktBuf for T where T: BorrowMut<[u8]> {}
+impl<T> PktBuf for T where T: AsRef<[u8]> {}
+impl<T> MutPktBuf for T where T: AsMut<[u8]> {}
 
 pub trait Header<T>
-    where T: PktBuf
+    where T: AsRef<[u8]>
 {
     fn with_buf(buf: T) -> Self;
     fn into_buf(self) -> T;
@@ -66,7 +66,7 @@ pub trait Header<T>
     fn len(&self) -> usize;
 }
 
-pub trait Pair: Borrow<[u8]> {
+pub trait Pair: AsRef<[u8]> {
     fn pair_iter<'b>(&'b self) -> iter::Map<slice::Chunks<'b, u8>, fn(&[u8]) -> u16> {
         fn combine(c: &[u8]) -> u16 {
             match c.len() {
@@ -75,11 +75,11 @@ pub trait Pair: Borrow<[u8]> {
                 _ => 0,
             }
         }
-        self.borrow().chunks(2).map(combine)
+        self.as_ref().chunks(2).map(combine)
     }
 }
 
-impl<T: ?Sized> Pair for T where T: Borrow<[u8]> {}
+impl<T: ?Sized> Pair for T where T: AsRef<[u8]> {}
 
 pub trait Checksum {
     fn checksum(&mut self) -> u16;

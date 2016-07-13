@@ -28,7 +28,7 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn read_from<R: Read + Sized>(stream: &mut R) -> Result<Self> {
+    pub fn read_from<R: Read>(stream: &mut R) -> Result<Self> {
         let mut buf = Vec::new();
         try!(stream.take(1).read_to_end(&mut buf));
         let version = match buf[0] {
@@ -87,7 +87,7 @@ impl Response {
             }
         }
 
-        let addr = try!(Address::read_from(stream, &version));
+        let addr = try!(Address::read_from(stream, version));
 
         Ok(Response {
             version: version,
