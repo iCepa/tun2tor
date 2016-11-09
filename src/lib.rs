@@ -12,17 +12,15 @@
         missing_debug_implementations,
         trivial_casts,
         trivial_numeric_casts)]
+#![allow(dead_code,
+         unused_imports,
+         unused_variables,
+         missing_debug_implementations)]
 
 extern crate libc;
+extern crate rand;
+extern crate socks;
 
-#[macro_use]
-mod result;
-mod packet;
-mod ip;
-mod udp;
-mod tcp;
-mod tunif;
+pub mod packet;
+pub mod tunif;
 pub mod ffi;
-
-pub use result::{Result, Error};
-pub use tunif::TunIf;

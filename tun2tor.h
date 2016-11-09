@@ -11,12 +11,13 @@
 #define T2T_EXTERN      extern __attribute__((visibility ("default")))
 #endif
 
+#include <stdint.h>
+
 struct _tunif;
 typedef struct _tunif tunif;
 
-T2T_EXTERN tunif *tunif_new();
+T2T_EXTERN tunif *tunif_new(void *context, void (*packet_callback)(void *context, void *buffer, size_t len, uint8_t proto));
 T2T_EXTERN void *tunif_free(tunif *iface);
 
 T2T_EXTERN void tunif_input_packet(tunif *iface, const void *buffer, size_t len);
-T2T_EXTERN void tunif_set_packet_callback(tunif *iface, void *context, void (*packet_callback)(tunif *iface, void *context, const void *buffer, size_t len, char proto));
 

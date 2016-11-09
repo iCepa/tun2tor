@@ -5,8 +5,7 @@ use command::Command;
 use address::Address;
 use result::Result;
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Request<'a> {
     pub version: Version,
     pub command: Command,

@@ -9,6 +9,10 @@ use response::Response;
 use result::{Result, Error};
 
 pub trait Connect {
+    fn socks5_connect(&mut self, address: Address, auth: &[AuthMethod]) -> Result<Address> {
+        self.socks_connect(Version::V5, address, auth)
+    }
+
     fn socks_connect(&mut self,
                      version: Version,
                      address: Address,

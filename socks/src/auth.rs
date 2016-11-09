@@ -50,8 +50,7 @@ impl<'a> Greeting<'a> {
     }
 }
 
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Verdict {
     pub method: AuthMethod,
 }

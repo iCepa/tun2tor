@@ -4,72 +4,72 @@
 //! number of C functions
 #![deny(missing_docs)]
 #![allow(unsafe_code)]
-#![allow(dead_code)]
 
+use std::net::IpAddr;
 use std::mem;
 use std::slice;
-use std::sync::{Arc, Mutex};
-use libc::{c_void, c_char, size_t, AF_INET, AF_INET6};
+use std::sync::Arc;
+use std::ptr;
+use libc::{c_void, uint8_t, size_t, AF_INET, AF_INET6};
 
-use tunif::{TunIf, IpHandler};
+use tunif::TunIf;
+
+macro_rules! try_log {
+    ($expr:expr) => (match $expr {
+        Ok(val) => val,
+        Err(err) => {
+            println!("Error: {:}", err);
+            return;
+        }
+    })
+}
 
 /// A callback that is called every time a packet
 /// is received over the interface
-pub type PktCallback = extern "C" fn(*mut Arc<Mutex<TunIf>>,
-                                     *mut c_void,
-                                     *const c_void,
-                                     size_t,
-                                     c_char)
-                                     -> c_void;
+pub type TunIfCallback = extern "C" fn(*mut c_void, *const c_void, size_t, uint8_t) -> c_void;
 
 /// Creates a new tunnel interface and returns a pointer to it
 /// ```c
 /// tunif *interface = tunif_new();
 /// ```
 #[no_mangle]
-pub unsafe extern "C" fn tunif_new() -> *mut Arc<Mutex<TunIf>> {
-    Box::into_raw(Box::new(Arc::new(Mutex::new(TunIf::new()))))
+pub unsafe extern "C" fn tunif_new(context: *mut c_void,
+                                   callback: Option<TunIfCallback>)
+                                   -> *mut TunIf {
+    let context: usize = mem::transmute(context);
+    if let Some(cb) = callback {
+        cb(ptr::null_mut(), ptr::null(), 0, AF_INET as uint8_t);
+    }
+    match callback {
+        Some(callback) => {
+            let callback = Arc::new(move |packet: Vec<u8>, hint: IpAddr| {
+                let slice = packet.into_boxed_slice();
+                let len = slice.len();
+                let ptr = Box::into_raw(slice) as *const c_void;
+                let context: *mut c_void = mem::transmute(context);
+                let proto = match hint {
+                    IpAddr::V4(_a) => AF_INET as uint8_t,
+                    IpAddr::V6(_a) => AF_INET6 as uint8_t,
+                };
+                callback(context, ptr, len, proto);
+            });
+            Box::into_raw(Box::new(TunIf::new(callback)))
+        }
+        None => ptr::null_mut(),
+    }
 }
 
 /// Frees an existing tunnel interface
 #[no_mangle]
-pub unsafe extern "C" fn tunif_free(tunif: *mut Arc<Mutex<TunIf>>) {
-    let tunif = Box::from_raw(tunif);
-    (*tunif).set_packet_callback(None);
-    drop(tunif);
+pub unsafe extern "C" fn tunif_free(tunif: *mut TunIf) {
+    drop(Box::from_raw(tunif))
 }
 
 /// Sends a packet to the given tunnel interface
 #[no_mangle]
-pub unsafe extern "C" fn tunif_input_packet(tunif: *mut Arc<Mutex<TunIf>>,
+pub unsafe extern "C" fn tunif_input_packet(tunif: *mut TunIf,
                                             buffer: *const c_void,
-                                            len: usize) {
+                                            len: size_t) {
     let packet = slice::from_raw_parts(buffer as *const u8, len);
     try_log!((*tunif).input_packet(packet));
-}
-
-/// Sets a callback to be called every time a packet
-/// is received over the interface
-#[no_mangle]
-pub unsafe extern "C" fn tunif_set_packet_callback(tunif: *mut Arc<Mutex<TunIf>>,
-                                                   context: *mut c_void,
-                                                   cb: Option<PktCallback>) {
-    let ptr: usize = mem::transmute(tunif);
-    let context: usize = mem::transmute(context);
-    (*tunif).set_packet_callback(match cb {
-        Some(cb) => {
-            Some(Box::new(move |packet, version| {
-                let tunif: *mut Arc<Mutex<TunIf>> = mem::transmute(ptr);
-                let context: *mut c_void = mem::transmute(context);
-                let bytes: *const c_void = mem::transmute(&packet[0]);
-                let len = packet.len();
-                let proto = match version {
-                    6 => AF_INET6 as c_char,
-                    _ => AF_INET as c_char,
-                };
-                cb(tunif, context, bytes, len, proto);
-            }))
-        }
-        _ => None,
-    });
 }

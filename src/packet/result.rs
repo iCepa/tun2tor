@@ -1,14 +1,22 @@
+use std::error;
 use std::fmt;
 use std::result;
-use std::error;
+use std::sync::mpsc::SendError;
 
-use ip::IpProto;
+use packet::ip::IpProto;
 
 #[derive(Debug)]
 pub enum Error {
     IPVersionNotSupported(u8),
     IPProtoNotSupported(IpProto),
     IPChecksumInvalid,
+    TCBSendError(SendError<Box<[u8]>>),
+}
+
+impl From<SendError<Box<[u8]>>> for Error {
+    fn from(error: SendError<Box<[u8]>>) -> Error {
+        Error::TCBSendError(error)
+    }
 }
 
 impl fmt::Display for Error {
@@ -17,6 +25,7 @@ impl fmt::Display for Error {
             Error::IPVersionNotSupported(ref v) => write!(f, "IP version {:?} not supported", v),
             Error::IPProtoNotSupported(ref p) => write!(f, "IP protocol {:?} not supported", p),
             Error::IPChecksumInvalid => write!(f, "IP checksum invalid"),
+            _ => write!(f, "lol"),
         }
     }
 }
@@ -27,19 +36,9 @@ impl error::Error for Error {
             Error::IPVersionNotSupported(ref _v) => "IP version not supported",
             Error::IPProtoNotSupported(ref _p) => "IP protocol not supported",
             Error::IPChecksumInvalid => "IP checksum invalid",
+            _ => "lol",
         }
     }
 }
 
 pub type Result<T> = result::Result<T, Error>;
-
-#[macro_export]
-macro_rules! try_log {
-    ($expr:expr) => (match $expr {
-        Ok(val) => val,
-        Err(err) => {
-            println!("Error: {:}", err);
-            return;
-        }
-    })
-}

@@ -1,5 +1,5 @@
 use std::str;
-use std::net::{SocketAddrV4, SocketAddrV6, Ipv4Addr};
+use std::net::{SocketAddr, SocketAddrV4, SocketAddrV6, Ipv4Addr};
 use std::io::{Read, Write};
 
 use version::Version;
@@ -16,12 +16,33 @@ pub enum Address {
     HostName(String, u16),
 }
 
+impl From<SocketAddr> for Address {
+    fn from(addr: SocketAddr) -> Address {
+        match addr {
+            SocketAddr::V4(a) => Address::V4(a),
+            SocketAddr::V6(a) => Address::V6(a),
+        }
+    }
+}
+
+impl From<SocketAddrV4> for Address {
+    fn from(addr: SocketAddrV4) -> Address {
+        Address::V4(addr)
+    }
+}
+
+impl From<SocketAddrV6> for Address {
+    fn from(addr: SocketAddrV6) -> Address {
+        Address::V6(addr)
+    }
+}
+
 impl Address {
     pub fn read_from<R: Read>(stream: &mut R, version: Version) -> Result<Self> {
         match version {
             Version::V4 => {
-                let mut buf = Vec::new();
-                try!(stream.take(6).read_to_end(&mut buf));
+                let mut buf = [0; 6];
+                try!(stream.read_exact(&mut buf));
                 let port = (buf[1] as u16) << 8 | buf[0] as u16;
                 let addr = Ipv4Addr::new(buf[2], buf[3], buf[4], buf[5]);
                 Ok(Address::V4(SocketAddrV4::new(addr, port)))
