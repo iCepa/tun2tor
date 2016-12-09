@@ -1,0 +1,13 @@
+[package]
+name = "lwip"
+version = "0.1.0"
+authors = ["Conrad Kramer <conrad@kramerapps.com>"]
+build = "build.rs"
+
+[dependencies]
+byteorder = "0.5"
+futures = "0.1.6"
+tokio-core = "0.1"
+
+[build-dependencies]
+gcc = { version = "0.3", features = ["parallel"] }
