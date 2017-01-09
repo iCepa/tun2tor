@@ -4,7 +4,9 @@
 
 `tun2tor` is a Rust library that creates a `utun` (userspace tunnel) interface, and connects it to to a stream-based proxy like `tor`. It is primarily intended to be embedded in the [iCepa](https://github.com/iCepa/iCepa) project, but it can also be used as a standalone utility.
 
-`tun2tor` only compiles for macOS and iOS, although Linux support is almost there.
+Currently, only macOS and iOS are supported, although Linux support is almost there.
+
+`tun2tor` uses [`tokio`](https://github.com/tokio-rs/tokio) for async IO and [`LwIP`](http://savannah.nongnu.org/projects/lwip/) for its TCP implementation (for now).
 
 [API Documentation](https://conradev.github.io/tun2tor)
 
