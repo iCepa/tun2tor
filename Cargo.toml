@@ -13,5 +13,5 @@ libc = "0.2"
 lwip = { path = "lwip" }
 log = "0.3"
 mio = "0.6"
-nix = { git = "https://github.com/nix-rust/nix.git" }
+nix = "0.8.1"
 tokio-core = "0.1"
