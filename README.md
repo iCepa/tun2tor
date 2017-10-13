@@ -17,6 +17,10 @@ Running `tun2tor` as a standalone utility is primarily useful for debugging at t
 ```bash
 $ git clone --recursive https://github.com/iCepa/tun2tor.git
 $ cd tun2tor
+
+$ git submodule init
+$ git submodule update
+
 $ cargo build
 $ sudo target/debug/tun2tor
 ```
