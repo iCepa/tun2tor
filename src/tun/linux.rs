@@ -28,10 +28,10 @@ impl Tun {
         let mut ifreq: super::ifreq_flags = unsafe { mem::zeroed() };
         ifreq.ifra_flags = IFF_TUN | IFF_NO_PI;
 
-        let fd = try!(open(TUN_PATH, O_RDWR, Mode::empty()));
+        let fd = open(TUN_PATH, O_RDWR, Mode::empty())?;
 
         ioctl!(set_iff with iow!(IOC_TUN_MAGIC, TUN_SET_IFF, 4));
-        try!(unsafe { set_iff(fd, &mut ifreq as *mut _ as *mut u8) });
+        unsafe { set_iff(fd, &mut ifreq as *mut _ as *mut u8)? };
         Ok(Tun { fd: fd })
     }
 
@@ -39,9 +39,14 @@ impl Tun {
         let mut ifreq: super::ifreq_flags = unsafe { mem::zeroed() };
 
         ioctl!(get_iff with ior!(IOC_TUN_MAGIC, TUN_GET_IFF, 4));
-        try!(unsafe { get_iff(self.fd, &mut ifreq as *mut _ as *mut u8) });
+        unsafe { get_iff(self.fd, &mut ifreq as *mut _ as *mut u8)? };
 
-        Ok(unsafe { CStr::from_ptr(ifreq.ifra_name.as_ptr()).to_str().unwrap().to_string() })
+        Ok(unsafe {
+            CStr::from_ptr(ifreq.ifra_name.as_ptr())
+                .to_str()
+                .unwrap()
+                .to_string()
+        })
     }
 }
 
@@ -66,21 +71,23 @@ impl AsRawFd for Tun {
 }
 
 impl Evented for Tun {
-    fn register(&self,
-                poll: &Poll,
-                token: Token,
-                interest: Ready,
-                opts: PollOpt)
-                -> io::Result<()> {
+    fn register(
+        &self,
+        poll: &Poll,
+        token: Token,
+        interest: Ready,
+        opts: PollOpt,
+    ) -> io::Result<()> {
         EventedFd(&self.fd).register(poll, token, interest, opts)
     }
 
-    fn reregister(&self,
-                  poll: &Poll,
-                  token: Token,
-                  interest: Ready,
-                  opts: PollOpt)
-                  -> io::Result<()> {
+    fn reregister(
+        &self,
+        poll: &Poll,
+        token: Token,
+        interest: Ready,
+        opts: PollOpt,
+    ) -> io::Result<()> {
         EventedFd(&self.fd).reregister(poll, token, interest, opts)
     }
 

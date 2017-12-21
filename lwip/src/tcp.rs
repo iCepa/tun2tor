@@ -53,7 +53,7 @@ extern "C" fn listener_accept(arg: *mut c_void, newpcb: *mut tcp_pcb, err: err_t
         let listener: &mut TcpListener = &mut *(arg as *mut TcpListener);
         listener.queue.push_back(result.and_then(|_| TcpStream::new(newpcb)));
         if let Some(ref task) = listener.task {
-            task.unpark();
+            task.notify();
         }
     }
     err_t::ERR_OK
@@ -69,7 +69,7 @@ pub struct TcpListener {
 impl TcpListener {
     pub fn bind(addr: &SocketAddr) -> io::Result<Box<TcpListener>> {
         let mut pcb = TcpPcb::new();
-        try!(pcb.bind(addr));
+        pcb.bind(addr)?;
         pcb.listen(TCP_DEFAULT_LISTEN_BACKLOG);
         let mut listener = Box::new(TcpListener {
             pcb: pcb,
@@ -91,7 +91,7 @@ impl Stream for TcpListener {
 
     fn poll(&mut self) -> Poll<Option<Box<TcpStream>>, io::Error> {
         if self.task.is_none() {
-            self.task = Some(task::park());
+            self.task = Some(task::current());
         }
         match self.queue.pop_front() {
             Some(Ok(s)) => Ok(Async::Ready(Some(s))),
@@ -118,7 +118,7 @@ extern "C" fn stream_recv(arg: *mut c_void,
             pbuf_chain(stream.buf, p);
         }
         if let Some(ref task) = stream.read_task {
-            task.unpark();
+            task.notify();
         }
         err_t::ERR_OK
     }
@@ -128,7 +128,7 @@ extern "C" fn stream_sent(arg: *mut c_void, _tpcb: *mut tcp_pcb, _len: u16) -> e
     unsafe {
         let stream: &mut TcpStream = &mut *(arg as *mut TcpStream);
         if let Some(ref task) = stream.write_task {
-            task.unpark();
+            task.notify();
         }
         err_t::ERR_OK
     }
@@ -173,7 +173,7 @@ impl TcpStream {
 
     pub fn poll_read(&mut self) -> Async<()> {
         if self.read_task.is_none() {
-            self.read_task = Some(task::park());
+            self.read_task = Some(task::current());
         }
         if self.buf.is_null() {
             Async::NotReady
@@ -184,7 +184,7 @@ impl TcpStream {
 
     pub fn poll_write(&mut self) -> Async<()> {
         if self.write_task.is_none() {
-            self.write_task = Some(task::park());
+            self.write_task = Some(task::current());
         }
         let snd_buf = unsafe { (&*self.pcb.0).snd_buf };
         if snd_buf > 0 {
@@ -284,8 +284,8 @@ impl Write for EventedTcpStream {
         if let Async::NotReady = self.poll_write() {
             return Err(io::Error::new(io::ErrorKind::WouldBlock, "would block"));
         }
-        let size = try!(self.inner.write(buf));
-        try!(self.inner.flush());
+        let size = self.inner.write(buf)?;
+        self.inner.flush()?;
         Ok(size)
     }
 

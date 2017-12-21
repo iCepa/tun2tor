@@ -10,7 +10,7 @@ use std::fmt;
 use std::io;
 use std::net::SocketAddr;
 
-use tokio_core::io::Window;
+use tokio_io::io::Window;
 
 use self::bytes::Bytes;
 use self::ip::IpHeaderBuilder;
@@ -79,7 +79,7 @@ impl IpPacket {
     }
 
     fn with_bytes(bytes: Bytes) -> io::Result<IpPacket> {
-        let (ip_hdr, mut remaining) = try!(IpHeader::with_bytes(bytes.clone()));
+        let (ip_hdr, mut remaining) = IpHeader::with_bytes(bytes.clone())?;
         let mut exts = Vec::new();
         let mut next = ip_hdr.next();
         loop {
@@ -136,11 +136,15 @@ impl IpPacket {
     }
 
     pub fn src(&self) -> Option<SocketAddr> {
-        self.payload.src().map(|p| SocketAddr::new(self.fixed.src(), p))
+        self.payload.src().map(
+            |p| SocketAddr::new(self.fixed.src(), p),
+        )
     }
 
     pub fn dest(&self) -> Option<SocketAddr> {
-        self.payload.dest().map(|p| SocketAddr::new(self.fixed.dest(), p))
+        self.payload.dest().map(
+            |p| SocketAddr::new(self.fixed.dest(), p),
+        )
     }
 
     pub fn checksum_valid(&self) -> bool {

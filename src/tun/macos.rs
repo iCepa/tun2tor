@@ -27,7 +27,7 @@ const UTUN_OPT_IFNAME: c_int = 2;
 macro_rules! ifreq_prop {
     ($get:ident, $set:ident, $ioctl_get:ident, $ioctl_set:ident) => {
         pub fn $set(&self, addr: Ipv4Addr) -> io::Result<()> {
-            let ifname = try!(self.ifname());
+            let ifname = self.ifname()?;
             
             let addr_in = match InetAddr::from_std(&SocketAddr::new(IpAddr::V4(addr), 0)) {
                 InetAddr::V4(addr_in) => addr_in,
@@ -40,24 +40,24 @@ macro_rules! ifreq_prop {
             unsafe { ptr::copy_nonoverlapping(ifname.as_ptr() as *const _, ifreq.ifra_name.as_mut_ptr(), ifname.len()) };
             ifreq.ifra_addr = ifra_addr;
 
-            ioctl!(write set_addr with IOC_IF_MAGIC, $ioctl_set; super::ifreq_addr);
-            let fd = try!(socket(AddressFamily::Inet, SockType::Datagram, SockFlag::empty(), 0));
-            try!(unsafe { set_addr(fd, &ifreq) });
-            try!(close(fd));
+            ioctl!(write_ptr set_addr with IOC_IF_MAGIC, $ioctl_set; super::ifreq_addr);
+            let fd = try_nix!(socket(AddressFamily::Inet, SockType::Datagram, SockFlag::empty(), 0));
+            try_nix!(unsafe { set_addr(fd, &ifreq) });
+            try_nix!(close(fd));
             Ok(())
         }
 
         pub fn $get(&self) -> io::Result<Ipv4Addr> {
-            let ifname = try!(self.ifname());
+            let ifname = self.ifname()?;
 
             let mut ifreq: super::ifreq_addr = unsafe { mem::zeroed() };
             unsafe { ptr::copy_nonoverlapping(ifname.as_ptr() as *const _, ifreq.ifra_name.as_mut_ptr(), ifname.len()) };
             ifreq.ifra_addr.sa_family = AF_INET as u8;
 
-            ioctl!(write get_addr with IOC_IF_MAGIC, $ioctl_get; super::ifreq_addr);
-            let fd = try!(socket(AddressFamily::Inet, SockType::Datagram, SockFlag::empty(), 0));
-            try!(unsafe { get_addr(fd, &ifreq) });
-            try!(close(fd));
+            ioctl!(write_ptr get_addr with IOC_IF_MAGIC, $ioctl_get; super::ifreq_addr);
+            let fd = try_nix!(socket(AddressFamily::Inet, SockType::Datagram, SockFlag::empty(), 0));
+            try_nix!(unsafe { get_addr(fd, &ifreq) });
+            try_nix!(close(fd));
 
             let addr = match InetAddr::V4(unsafe { *(&ifreq.ifra_addr as *const _ as *const sockaddr_in) }).ip() {
                 socket::IpAddr::V4(addr) => addr,
@@ -74,12 +74,18 @@ pub struct Tun {
 
 impl Tun {
     pub fn new() -> io::Result<Tun> {
-        let fd = try!(socket(AddressFamily::System,
-                             SockType::Datagram,
-                             SOCK_NONBLOCK | SOCK_CLOEXEC,
-                             SYSPROTO_CONTROL));
-        let ctrl_addr = try!(SockAddr::new_sys_control(fd, "com.apple.net.utun_control", 0));
-        try!(connect(fd, &ctrl_addr));
+        let fd = try_nix!(socket(
+            AddressFamily::System,
+            SockType::Datagram,
+            SOCK_NONBLOCK | SOCK_CLOEXEC,
+            SYSPROTO_CONTROL,
+        ));
+        let ctrl_addr = try_nix!(SockAddr::new_sys_control(
+            fd,
+            "com.apple.net.utun_control",
+            0,
+        ));
+        try_nix!(connect(fd, &ctrl_addr));
         Ok(Tun { fd: fd })
     }
 
@@ -87,16 +93,20 @@ impl Tun {
         let mut buf = [0; super::IFNAMSIZ];
         let mut len = buf.len() as socklen_t;
         let success = unsafe {
-            getsockopt(self.fd,
-                       SYSPROTO_CONTROL,
-                       UTUN_OPT_IFNAME,
-                       buf.as_mut_ptr() as *mut c_void,
-                       &mut len)
+            getsockopt(
+                self.fd,
+                SYSPROTO_CONTROL,
+                UTUN_OPT_IFNAME,
+                buf.as_mut_ptr() as *mut c_void,
+                &mut len,
+            )
         };
         if success != 0 {
             return Err(io::Error::last_os_error());
         }
-        Ok(unsafe { CStr::from_ptr(buf.as_ptr()).to_str().unwrap().to_string() })
+        Ok(unsafe {
+            CStr::from_ptr(buf.as_ptr()).to_str().unwrap().to_string()
+        })
     }
 
     ifreq_prop!(addr, set_addr, IOC_GET_IFADDR, IOC_SET_IFADDR);
@@ -124,21 +134,23 @@ impl AsRawFd for Tun {
 }
 
 impl Evented for Tun {
-    fn register(&self,
-                poll: &Poll,
-                token: Token,
-                interest: Ready,
-                opts: PollOpt)
-                -> io::Result<()> {
+    fn register(
+        &self,
+        poll: &Poll,
+        token: Token,
+        interest: Ready,
+        opts: PollOpt,
+    ) -> io::Result<()> {
         EventedFd(&self.fd).register(poll, token, interest, opts)
     }
 
-    fn reregister(&self,
-                  poll: &Poll,
-                  token: Token,
-                  interest: Ready,
-                  opts: PollOpt)
-                  -> io::Result<()> {
+    fn reregister(
+        &self,
+        poll: &Poll,
+        token: Token,
+        interest: Ready,
+        opts: PollOpt,
+    ) -> io::Result<()> {
         EventedFd(&self.fd).reregister(poll, token, interest, opts)
     }
 
@@ -184,7 +196,12 @@ impl<'a> Write for &'a Tun {
         let proto = match src[0] >> 4 {
             4 => AF_INET,
             6 => AF_INET6,
-            _ => return Err(io::Error::new(io::ErrorKind::InvalidInput, "Invalid IP version")),
+            _ => {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "Invalid IP version",
+                ))
+            }
         };
 
         let mut buf = [0; 4];

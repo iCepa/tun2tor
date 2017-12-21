@@ -5,7 +5,7 @@ use std::rc::Rc;
 use std::cell::{RefCell, Ref, RefMut};
 
 use byteorder::{ReadBytesExt, WriteBytesExt, ByteOrder};
-use tokio_core::io::Window;
+use tokio_io::io::Window;
 
 #[derive(Clone, Debug)]
 pub struct Bytes {
@@ -81,8 +81,9 @@ impl Bytes {
     }
 
     pub fn as_mut(&mut self) -> RefMut<[u8]> {
-        RefMut::map(self.bytes.borrow_mut(),
-                    |s| &mut s[self.off..self.off + self.len])
+        RefMut::map(self.bytes.borrow_mut(), |s| {
+            &mut s[self.off..self.off + self.len]
+        })
     }
 
     pub fn read_u8(&self, pos: usize) -> io::Result<u8> {
@@ -146,7 +147,8 @@ pub trait Checksum {
 }
 
 impl<T> Checksum for T
-    where T: Iterator<Item = u16>
+where
+    T: Iterator<Item = u16>,
 {
     fn checksum(&mut self) -> u16 {
         !self.fold(0, |a, b| {

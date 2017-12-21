@@ -16,7 +16,7 @@ fn netif_common_output(netif: *mut netif, p: *mut pbuf, ipaddr: IpAddr) -> err_t
         let netif: &mut NetIf = &mut *((&mut *netif).state as *mut NetIf);
         netif.queue.push_back((Box::from_pbuf(p), ipaddr));
         if let Some(ref task) = netif.read_task {
-            task.unpark();
+            task.notify();
         }
     }
     err_t::ERR_OK
@@ -80,7 +80,7 @@ impl Stream for NetIf {
 
     fn poll(&mut self) -> Poll<Option<(Box<[u8]>, IpAddr)>, io::Error> {
         if self.read_task.is_none() {
-            self.read_task = Some(task::park());
+            self.read_task = Some(task::current());
         }
         self.queue.pop_front()
             .map(|s| Ok(Async::Ready(Some(s))))

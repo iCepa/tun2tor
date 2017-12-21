@@ -10,6 +10,7 @@ extern crate mio;
 extern crate nix;
 #[macro_use]
 extern crate tokio_core;
+extern crate tokio_io;
 
 #[macro_use]
 mod packet;
@@ -37,10 +38,11 @@ pub struct DnsTcpStack {
 }
 
 impl DnsTcpStack {
-    pub fn new<B: 'static + TcpBackend, R: 'static + DnsResolver>(backend: B,
-                                                                  resolver: R,
-                                                                  handle: &Handle)
-                                                                  -> DnsTcpStack {
+    pub fn new<B: 'static + TcpBackend, R: 'static + DnsResolver>(
+        backend: B,
+        resolver: R,
+        handle: &Handle,
+    ) -> DnsTcpStack {
         DnsTcpStack {
             tcp: TcpStack::new(backend, handle),
             dns: DnsStack::new(resolver, handle),
@@ -55,7 +57,7 @@ impl Sink for DnsTcpStack {
     fn start_send(&mut self, item: Box<[u8]>) -> StartSend<Box<[u8]>, ::std::io::Error> {
         let packet = IpPacket::new(item).unwrap();
         let is_dns = packet.payload.is_udp() &&
-                     packet.dest().map(|d| d.port() == 53).unwrap_or(false);
+            packet.dest().map(|d| d.port() == 53).unwrap_or(false);
         let item = packet.into_inner();
         if is_dns {
             self.dns.start_send(item)
@@ -65,7 +67,7 @@ impl Sink for DnsTcpStack {
     }
 
     fn poll_complete(&mut self) -> Poll<(), ::std::io::Error> {
-        try!(self.tcp.poll_complete());
+        self.tcp.poll_complete()?;
         self.dns.poll_complete()
     }
 }

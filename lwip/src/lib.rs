@@ -2,7 +2,6 @@
 
 extern crate byteorder;
 extern crate futures;
-#[macro_use]
 extern crate tokio_core;
 
 mod error;
