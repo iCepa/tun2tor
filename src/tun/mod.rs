@@ -6,6 +6,26 @@ use futures::{Async, Stream, Sink, Poll, AsyncSink, StartSend};
 use tokio_core::reactor::{Handle, PollEvented};
 use nix::libc::{c_char, c_short, sockaddr};
 
+fn from_nix_error(err: ::nix::Error) -> io::Error {
+    match err {
+        ::nix::Error::Sys(e) => e.into(),
+        _ => unreachable!(),
+    }
+}
+
+#[macro_export]
+macro_rules! try_nix {
+    ($expr:expr) => (match $expr {
+        ::std::result::Result::Ok(val) => val,
+        ::std::result::Result::Err(err) => {
+            match err {
+                ::nix::Error::Sys(e) => return ::std::result::Result::Err(::std::convert::From::from(e)),
+                _ => unreachable!()
+            }
+        }
+    })
+}
+
 const IFNAMSIZ: usize = 16;
 
 #[repr(C)]
@@ -34,11 +54,11 @@ pub struct Tun {
 
 impl Tun {
     pub fn new(handle: &Handle) -> io::Result<Tun> {
-        Tun::from_tun(try!(platform::Tun::new()), handle)
+        Tun::from_tun(platform::Tun::new()?, handle)
     }
 
     pub fn from_tun(tun: platform::Tun, handle: &Handle) -> io::Result<Tun> {
-        Ok(Tun { io: try!(PollEvented::new(tun, handle)) })
+        Ok(Tun { io: PollEvented::new(tun, handle)? })
     }
 
     pub fn ifname(&self) -> io::Result<String> {
@@ -117,8 +137,10 @@ impl Sink for Tun {
         let result = self.io.write(&item[..]);
         match result {
             Ok(0) => {
-                Err(io::Error::new(io::ErrorKind::WriteZero,
-                                   "failed to write packet to interface"))
+                Err(io::Error::new(
+                    io::ErrorKind::WriteZero,
+                    "failed to write packet to interface",
+                ))
             }
             Ok(..) => Ok(AsyncSink::Ready),
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => Ok(AsyncSink::NotReady(item)),
@@ -130,8 +152,4 @@ impl Sink for Tun {
         try_nb!(self.io.flush());
         Ok(Async::Ready(()))
     }
-}
-
-fn from_nix_error(err: ::nix::Error) -> io::Error {
-    io::Error::from_raw_os_error(err.errno() as i32)
 }

@@ -1,9 +1,9 @@
-extern crate gcc;
+extern crate cc;
 
 use std::env;
 
 fn main() {
-    let mut config = gcc::Config::new();
+    let mut config = cc::Build::new();
     if env::var("PROFILE").map(|v| &v[..] == "debug").unwrap_or(false) {
         config.define("LWIP_DEBUG", Some("1"));
     }

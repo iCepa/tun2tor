@@ -43,16 +43,18 @@ impl<R: Read> ReadHalf<R> {
 }
 
 pub struct Transfer<T, U>
-    where T: Read + Write,
-          U: Read + Write
+where
+    T: Read + Write,
+    U: Read + Write,
 {
     first: ReadHalf<T>,
     second: ReadHalf<U>,
 }
 
 pub fn transfer<T, U>(first: T, second: U) -> Transfer<T, U>
-    where T: Read + Write,
-          U: Read + Write
+where
+    T: Read + Write,
+    U: Read + Write,
 {
     Transfer {
         first: ReadHalf {
@@ -75,15 +77,16 @@ pub fn transfer<T, U>(first: T, second: U) -> Transfer<T, U>
 }
 
 impl<T, U> Future for Transfer<T, U>
-    where T: Read + Write,
-          U: Read + Write
+where
+    T: Read + Write,
+    U: Read + Write,
 {
     type Item = (u64, u64);
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<(u64, u64), io::Error> {
-        let first = try!(self.first.poll(self.second.as_mut()));
-        let second = try!(self.second.poll(self.first.as_mut()));
+        let first = self.first.poll(self.second.as_mut())?;
+        let second = self.second.poll(self.first.as_mut())?;
         if let (Async::Ready(first), Async::Ready(second)) = (first, second) {
             Ok(Async::Ready((first, second)))
         } else {
@@ -100,26 +103,28 @@ struct StreamHalf<T: Stream> {
 
 impl<T: Stream> StreamHalf<T> {
     fn poll<U: Sink<SinkItem = T::Item>, W>(&mut self, sink: &mut U) -> Poll<(), W>
-        where W: From<T::Error> + From<U::SinkError>
+    where
+        W: From<T::Error> + From<U::SinkError>,
     {
         if self.done {
             return Ok(Async::Ready(()));
         }
 
-        let stream =
-            self.inner.as_mut().expect("Attempted to poll StreamTransfer after completion");
+        let stream = self.inner.as_mut().expect(
+            "Attempted to poll StreamTransfer after completion",
+        );
 
         if let Some(item) = self.buffered.take() {
-            if let AsyncSink::NotReady(item) = try!(sink.start_send(item)) {
+            if let AsyncSink::NotReady(item) = sink.start_send(item)? {
                 self.buffered = Some(item);
                 return Ok(Async::NotReady);
             }
         }
 
         loop {
-            match try!(stream.poll()) {
+            match stream.poll()? {
                 Async::Ready(Some(item)) => {
-                    if let AsyncSink::NotReady(item) = try!(sink.start_send(item)) {
+                    if let AsyncSink::NotReady(item) = sink.start_send(item)? {
                         self.buffered = Some(item);
                         return Ok(Async::NotReady);
                     }
@@ -138,7 +143,9 @@ impl<T: Stream> StreamHalf<T> {
     }
 
     fn inner_mut(&mut self) -> &mut T {
-        self.inner.as_mut().expect("Attempted to poll StreamTransfer after completion")
+        self.inner.as_mut().expect(
+            "Attempted to poll StreamTransfer after completion",
+        )
     }
 
     fn complete(&mut self) -> T {
@@ -147,16 +154,18 @@ impl<T: Stream> StreamHalf<T> {
 }
 
 pub struct StreamTransfer<T, U, V, W>
-    where T: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>,
-          U: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>
+where
+    T: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>,
+    U: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>,
 {
     first: StreamHalf<T>,
     second: StreamHalf<U>,
 }
 
 pub fn stream_transfer<T, U, V, W>(first: T, second: U) -> StreamTransfer<T, U, V, W>
-    where T: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>,
-          U: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>
+where
+    T: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>,
+    U: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>,
 {
     StreamTransfer {
         first: StreamHalf {
@@ -173,17 +182,22 @@ pub fn stream_transfer<T, U, V, W>(first: T, second: U) -> StreamTransfer<T, U, 
 }
 
 impl<T, U, V, W> Future for StreamTransfer<T, U, V, W>
-    where T: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>,
-          U: Sink<SinkItem = V, SinkError = W> + Stream<Item = V, Error = W>
+where
+    T: Sink<SinkItem = V, SinkError = W>
+        + Stream<Item = V, Error = W>,
+    U: Sink<SinkItem = V, SinkError = W>
+        + Stream<Item = V, Error = W>,
 {
     type Item = (T, U);
     type Error = W;
 
     fn poll(&mut self) -> Poll<(T, U), W> {
-        let first = try!(self.first.poll::<_, W>(self.second.inner_mut()));
-        let second = try!(self.second.poll::<_, W>(self.first.inner_mut()));
+        let first = self.first.poll::<_, W>(self.second.inner_mut())?;
+        let second = self.second.poll::<_, W>(self.first.inner_mut())?;
         if (first, second) == (Async::Ready(()), Async::Ready(())) {
-            Ok(Async::Ready((self.first.complete(), self.second.complete())))
+            Ok(Async::Ready(
+                (self.first.complete(), self.second.complete()),
+            ))
         } else {
             Ok(Async::NotReady)
         }

@@ -9,10 +9,11 @@ use tokio_core::reactor::Handle;
 use io::transfer;
 
 pub trait TcpBackend {
-    fn build(&self,
-             addr: &SocketAddr,
-             handle: &Handle)
-             -> Box<Future<Item = TcpStream, Error = io::Error>>;
+    fn build(
+        &self,
+        addr: &SocketAddr,
+        handle: &Handle,
+    ) -> Box<Future<Item = TcpStream, Error = io::Error>>;
 }
 
 pub struct TcpStack {
@@ -22,9 +23,11 @@ pub struct TcpStack {
 
 impl TcpStack {
     pub fn new<B: 'static + TcpBackend>(backend: B, handle: &Handle) -> TcpStack {
-        let netif = NetIf::add(Ipv4Addr::new(0, 0, 0, 0),
-                               Ipv4Addr::new(0, 0, 0, 0),
-                               Ipv4Addr::new(0, 0, 0, 0));
+        let netif = NetIf::add(
+            Ipv4Addr::new(0, 0, 0, 0),
+            Ipv4Addr::new(0, 0, 0, 0),
+            Ipv4Addr::new(0, 0, 0, 0),
+        );
 
         let handle = handle.clone();
         let listener =
@@ -32,8 +35,9 @@ impl TcpStack {
         let backends = listener.for_each(move |incoming| {
             let dest = incoming.local().unwrap();
             let incoming = EventedTcpStream::new(incoming);
-            let stream = backend.build(&dest, &handle)
-                .and_then(move |outgoing| transfer(outgoing, incoming));
+            let stream = backend.build(&dest, &handle).and_then(move |outgoing| {
+                transfer(outgoing, incoming)
+            });
             handle.spawn(stream.then(|_| futures::finished(())));
             Ok(())
         });
@@ -63,7 +67,9 @@ impl Stream for TcpStack {
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Option<Box<[u8]>>, io::Error> {
-        try!(self.backends.poll());
-        self.netif.poll().map(|a| a.map(|o| o.map(|(buf, _addr)| buf)))
+        self.backends.poll()?;
+        self.netif.poll().map(
+            |a| a.map(|o| o.map(|(buf, _addr)| buf)),
+        )
     }
 }

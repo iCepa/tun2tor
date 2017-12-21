@@ -14,10 +14,14 @@ pub unsafe extern "C" fn tun2tor_run(fd: c_int) {
 
     let tun = platform::Tun::from_raw_fd(fd);
     let tun = Tun::from_tun(tun, &handle).unwrap();
-    let resolver = DnsPortResolver::new(&SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                                                         12345));
-    let backend = SocksBackend::new(&SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                                                     9050));
+    let resolver = DnsPortResolver::new(&SocketAddr::new(
+        IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+        12345,
+    ));
+    let backend = SocksBackend::new(&SocketAddr::new(
+        IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+        9050,
+    ));
     let stack = DnsTcpStack::new(backend, resolver, &handle);
 
     core.run(stream_transfer(stack, tun)).unwrap();

@@ -97,10 +97,7 @@ impl Ipv4Header {
 
     pub fn pseudo_iter(&self, len: usize) -> iter::Chain<bytes::PairIter, vec::IntoIter<u16>> {
         let pseudo = vec![self.next().value() as u16, len as u16];
-        self.0
-            .slice(12, 20)
-            .pair_iter()
-            .chain(pseudo.into_iter())
+        self.0.slice(12, 20).pair_iter().chain(pseudo.into_iter())
     }
 
     fn checksum(&self) -> u16 {
@@ -124,11 +121,15 @@ impl Ipv4Header {
     }
 
     pub fn set_src(&mut self, addr: Ipv4Addr) {
-        (&mut self.0.as_mut()[12..]).write_all(&addr.octets()).unwrap();
+        (&mut self.0.as_mut()[12..])
+            .write_all(&addr.octets())
+            .unwrap();
     }
 
     pub fn set_dest(&mut self, addr: Ipv4Addr) {
-        (&mut self.0.as_mut()[16..]).write_all(&addr.octets()).unwrap();
+        (&mut self.0.as_mut()[16..])
+            .write_all(&addr.octets())
+            .unwrap();
     }
 
     pub fn set_total_len(&mut self, len: usize) {
@@ -204,10 +205,7 @@ impl Ipv6Header {
 
     fn pseudo_iter(&self, len: usize) -> iter::Chain<bytes::PairIter, vec::IntoIter<u16>> {
         let pseudo = vec![self.next().value() as u16, len as u16];
-        self.0
-            .slice(8, 40)
-            .pair_iter()
-            .chain(pseudo.into_iter())
+        self.0.slice(8, 40).pair_iter().chain(pseudo.into_iter())
     }
 }
 
@@ -233,7 +231,10 @@ impl IpHeader {
         match bytes.read_u8(0).map(|v| v >> 4) {
             Ok(4) => Ipv4Header::with_bytes(bytes).map(|(h, b)| (IpHeader::V4(h), b)),
             Ok(6) => Ipv6Header::with_bytes(bytes).map(|(h, b)| (IpHeader::V6(h), b)),
-            Ok(..) => Err(io::Error::new(io::ErrorKind::InvalidData, "IP version not supported")),
+            Ok(..) => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "IP version not supported",
+            )),
             Err(e) => Err(e.into()),
         }
     }
@@ -382,7 +383,10 @@ impl ExtHeader {
             IpProto::HopByHopOpts => {
                 HopByHopOpts::with_bytes(bytes).map(|(h, b)| (ExtHeader::HopByHop(h), b))
             }
-            _ => Err(io::Error::new(io::ErrorKind::InvalidData, "IP proto not supported")),
+            _ => Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "IP proto not supported",
+            )),
         }
     }
 

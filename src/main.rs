@@ -16,10 +16,14 @@ fn main() {
     utun.set_addr(Ipv4Addr::new(172, 30, 20, 1)).unwrap();
     utun.set_netmask(Ipv4Addr::new(255, 255, 255, 255)).unwrap();
 
-    let resolver = DnsPortResolver::new(&SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                                                         12345));
-    let backend = SocksBackend::new(&SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-                                                     9050));
+    let resolver = DnsPortResolver::new(&SocketAddr::new(
+        IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+        12345,
+    ));
+    let backend = SocksBackend::new(&SocketAddr::new(
+        IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+        9050,
+    ));
     let stack = DnsTcpStack::new(backend, resolver, &handle);
 
     core.run(stream_transfer(stack, utun)).unwrap();

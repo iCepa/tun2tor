@@ -8,10 +8,11 @@ use tokio_core::reactor::Handle;
 use packet::{IpPacket, UdpPacketBuilder};
 
 pub trait DnsResolver {
-    fn resolve(&self,
-               query: Box<[u8]>,
-               handle: &Handle)
-               -> Box<Future<Item = Box<[u8]>, Error = io::Error>>;
+    fn resolve(
+        &self,
+        query: Box<[u8]>,
+        handle: &Handle,
+    ) -> Box<Future<Item = Box<[u8]>, Error = io::Error>>;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -26,10 +27,11 @@ impl DnsPortResolver {
 }
 
 impl DnsResolver for DnsPortResolver {
-    fn resolve(&self,
-               query: Box<[u8]>,
-               handle: &Handle)
-               -> Box<Future<Item = Box<[u8]>, Error = io::Error>> {
+    fn resolve(
+        &self,
+        query: Box<[u8]>,
+        handle: &Handle,
+    ) -> Box<Future<Item = Box<[u8]>, Error = io::Error>> {
         let addr = self.addr;
         let packet = IpPacket::new(query).unwrap();
         let (src, dest) = (packet.src().unwrap(), packet.dest().unwrap());
@@ -37,21 +39,28 @@ impl DnsResolver for DnsPortResolver {
 
         let bind = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0); // TODO: IPv6
         let socket = UdpSocket::bind(&bind, handle).unwrap();
-        Box::new(socket.send_dgram(packet.into_data(), addr).and_then(move |(socket, _buf)| {
-            let buf = vec![0; 2048]; // TODO: MTU
-            socket.recv_dgram(buf).and_then(move |(_socket, buf, len, from)| {
-                if from != addr {
-                    return Err(io::Error::new(io::ErrorKind::Other, "invalid DNS reply addess"));
-                }
-                let response = UdpPacketBuilder::new()
-                    .dest(src)
-                    .src(dest)
-                    .data(&buf[..len])
-                    .build()
-                    .into_inner();
-                Ok(response)
-            })
-        }))
+        Box::new(socket.send_dgram(packet.into_data(), addr).and_then(
+            move |(socket, _buf)| {
+                let buf = vec![0; 2048]; // TODO: MTU
+                socket.recv_dgram(buf).and_then(
+                    move |(_socket, buf, len, from)| {
+                        if from != addr {
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                "invalid DNS reply addess",
+                            ));
+                        }
+                        let response = UdpPacketBuilder::new()
+                            .dest(src)
+                            .src(dest)
+                            .data(&buf[..len])
+                            .build()
+                            .into_inner();
+                        Ok(response)
+                    },
+                )
+            },
+        ))
     }
 }
 
