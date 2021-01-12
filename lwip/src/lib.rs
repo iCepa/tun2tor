@@ -14,13 +14,13 @@ pub use netif::NetIf;
 pub use tcp::{TcpListener, TcpStream, EventedTcpStream};
 
 fn lwip_init() {
-    use std::sync::{Once, ONCE_INIT};
+    use std::sync::Once;
 
     #[link(name = "lwip", kind = "static")]
     extern "C" {
         fn lwip_init();
     }
 
-    static LWIP_INIT: Once = ONCE_INIT;
+    static LWIP_INIT: Once = Once::new();
     LWIP_INIT.call_once(|| unsafe { lwip_init() });
 }
