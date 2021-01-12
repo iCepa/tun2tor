@@ -15,7 +15,7 @@ const SOCKS_CMD_TCP_CONNECT: u8 = 0x01;
 const SOCKS5_ADDR_TYPE_IPV4: u8 = 0x01;
 const SOCKS5_ADDR_TYPE_IPV6: u8 = 0x04;
 
-type BoxedStream = Box<Future<Item = TcpStream, Error = io::Error>>;
+type BoxedStream = Box<dyn Future<Item = TcpStream, Error = io::Error>>;
 
 #[derive(Debug, Copy, Clone)]
 pub struct SocksBackend {

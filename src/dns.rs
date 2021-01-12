@@ -12,7 +12,7 @@ pub trait DnsResolver {
         &self,
         query: Box<[u8]>,
         handle: &Handle,
-    ) -> Box<Future<Item = Box<[u8]>, Error = io::Error>>;
+    ) -> Box<dyn Future<Item = Box<[u8]>, Error = io::Error>>;
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -31,7 +31,7 @@ impl DnsResolver for DnsPortResolver {
         &self,
         query: Box<[u8]>,
         handle: &Handle,
-    ) -> Box<Future<Item = Box<[u8]>, Error = io::Error>> {
+    ) -> Box<dyn Future<Item = Box<[u8]>, Error = io::Error>> {
         let addr = self.addr;
         let packet = IpPacket::new(query).unwrap();
         let (src, dest) = (packet.src().unwrap(), packet.dest().unwrap());
@@ -66,8 +66,8 @@ impl DnsResolver for DnsPortResolver {
 
 pub struct DnsStack {
     handle: Handle,
-    resolver: Box<DnsResolver>,
-    futures: Vec<Box<Future<Item = Box<[u8]>, Error = io::Error>>>,
+    resolver: Box<dyn DnsResolver>,
+    futures: Vec<Box<dyn Future<Item = Box<[u8]>, Error = io::Error>>>,
 }
 
 impl DnsStack {
