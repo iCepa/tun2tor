@@ -13,12 +13,12 @@ pub trait TcpBackend {
         &self,
         addr: &SocketAddr,
         handle: &Handle,
-    ) -> Box<Future<Item = TcpStream, Error = io::Error>>;
+    ) -> Box<dyn Future<Item = TcpStream, Error = io::Error>>;
 }
 
 pub struct TcpStack {
     netif: Box<NetIf>,
-    backends: Box<Future<Item = (), Error = io::Error>>,
+    backends: Box<dyn Future<Item = (), Error = io::Error>>,
 }
 
 impl TcpStack {
