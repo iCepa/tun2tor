@@ -36,4 +36,4 @@ $ dig @8.8.8.8 facebookcorewwwi.onion
 
 ## Notes from/to Alex
 
-- You need to pull in your own LWIP git checkout in the root of the repository.
+- You need to pull in your own LWIP git checkout in the lwip directory of the root of the repository.
