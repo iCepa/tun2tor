@@ -50,7 +50,10 @@ pub struct NetIf {
 impl NetIf {
     pub fn add(addr: Ipv4Addr, netmask: Ipv4Addr, gw: Ipv4Addr) -> Box<NetIf> {
         ::lwip_init();
-        let mut netif = Box::new(NetIf { inner: unsafe { mem::zeroed() }, read_task: None, queue: VecDeque::new() });
+        let inner = unsafe {
+            mem::zeroed()
+        };
+        let mut netif = Box::new(NetIf { inner: inner, read_task: None, queue: VecDeque::new() });
         let (addr, netmask, gw) = (ip4_addr_t::from(addr), ip4_addr_t::from(netmask), ip4_addr_t::from(gw));
         unsafe { netif_add(&mut netif.inner, &addr, &netmask, &gw, netif.as_mut() as *mut NetIf as *mut _, netif_init, netif_input); }
         netif
