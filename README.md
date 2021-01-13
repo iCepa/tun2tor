@@ -33,3 +33,7 @@ In order to route traffic through the interface, you need to modify the route ta
 $ sudo route add 8.8.8.8 172.30.20.1
 $ dig @8.8.8.8 facebookcorewwwi.onion
 ```
+
+## Notes from/to Alex
+
+- You need to pull in your own LWIP git checkout in the root of the repository.
