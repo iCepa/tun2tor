@@ -1,6 +1,3 @@
-[submodule "lwip/lwip"]
-	path = lwip/lwip
-	url = https://github.com/iCepa/lwip.git
 [submodule "lwip/lwip-contrib"]
 	path = lwip/lwip-contrib
 	url = git://git.savannah.nongnu.org/lwip/lwip-contrib.git
