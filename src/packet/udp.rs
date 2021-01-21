@@ -48,7 +48,7 @@ impl UdpHeader {
     }
 
     pub fn checksum_valid<V: Iterator<Item = u16>>(&self, header: &IpHeader, data: V) -> bool {
-        (self.checksum() == self.calculated_checksum(header, data))
+        self.checksum() == self.calculated_checksum(header, data)
     }
 
     pub fn calculated_checksum<V: Iterator<Item = u16>>(&self, header: &IpHeader, data: V) -> u16 {

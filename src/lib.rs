@@ -3,7 +3,6 @@ extern crate byteorder;
 extern crate futures;
 extern crate libc;
 extern crate lwip;
-#[macro_use(trace, log)]
 extern crate log;
 extern crate mio;
 #[macro_use]

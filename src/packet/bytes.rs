@@ -156,7 +156,7 @@ where
             while folded > 0xFFFF {
                 folded = (folded >> 16) + (folded & 0xFFFF);
             }
-            (folded as u16)
+            folded as u16
         })
     }
 }
