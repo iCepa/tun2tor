@@ -37,3 +37,7 @@ $ dig @8.8.8.8 facebookcorewwwi.onion
 ## Notes from/to Alex
 
 - You need to pull in your own LWIP git checkout in the lwip directory of the root of the repository.
+- When starting Instruments.app on macOS make sure you BOTH trace the Tor
+  process and the application you use for testing the Tun interface with. You
+  can add both processes in a single trace, but it is useful to have them
+  side-by-side.
