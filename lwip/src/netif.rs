@@ -67,6 +67,9 @@ impl Sink for NetIf {
     fn start_send(&mut self, item: Box<[u8]>) -> StartSend<Box<[u8]>, io::Error> {
         unsafe {
             let input = self.inner.input;
+            // FIXME(ahf) 2021/01/27: Can we find a way to avoid converting this to/from our [u8]
+            // into the LwIP internal pbuf? We spend quite some time (and twice the memory) when
+            // converting back and forward?
             let result: io::Result<()> = input(Box::into_pbuf(item), &mut self.inner).into();
             result.map(|_| AsyncSink::Ready)
         }
