@@ -41,3 +41,4 @@ $ dig @8.8.8.8 facebookcorewwwi.onion
   process and the application you use for testing the Tun interface with. You
   can add both processes in a single trace, but it is useful to have them
   side-by-side.
+- How could we pre-rebase of lwip build without ARP support? That makes no sense.
