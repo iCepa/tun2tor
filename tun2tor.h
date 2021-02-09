@@ -16,6 +16,6 @@
 
 #include <stdint.h>
 
-T2T_EXTERN void tun2tor_run(int fd);
+T2T_EXTERN void tun2tor_run(int fd, int resolver_port, int socks_port);
 
 #endif
