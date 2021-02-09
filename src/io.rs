@@ -1,5 +1,4 @@
 use std::io::{self, Read, Write};
-use log::{debug};
 
 use futures::{Future, Stream, Sink, Poll, Async, AsyncSink};
 
