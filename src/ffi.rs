@@ -8,7 +8,7 @@ use tun::platform;
 use io::stream_transfer;
 
 #[no_mangle]
-pub unsafe extern "C" fn tun2tor_run(fd: c_int) {
+pub unsafe extern "C" fn tun2tor_run(fd: c_int, resolver_port: c_int, socks_port: c_int) {
     let mut core = Core::new().unwrap();
     let handle = core.handle();
 
@@ -16,11 +16,11 @@ pub unsafe extern "C" fn tun2tor_run(fd: c_int) {
     let tun = Tun::from_tun(tun, &handle).unwrap();
     let resolver = DnsPortResolver::new(&SocketAddr::new(
         IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-        12345,
+        resolver_port as u16,
     ));
     let backend = SocksBackend::new(&SocketAddr::new(
         IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-        9050,
+        socks_port as u16,
     ));
     let stack = DnsTcpStack::new(backend, resolver, &handle);
 
