@@ -42,3 +42,4 @@ $ dig @8.8.8.8 facebookcorewwwi.onion
   can add both processes in a single trace, but it is useful to have them
   side-by-side.
 - How could we pre-rebase of lwip build without ARP support? That makes no sense.
+- Remember to update RunThread.swift from iCepa such that it runs `tun2tor_run(packetFlow.value(forKeyPath: "socket.fileDescriptor") as! Int32, 12345 as! Int32, 9050 as! Int32)`.
