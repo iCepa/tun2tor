@@ -23,6 +23,8 @@ pub struct TcpStack {
 
 impl TcpStack {
     pub fn new<B: 'static + TcpBackend>(backend: B, handle: &Handle) -> TcpStack {
+        // FIXME(ahf): While tuning, ensure this set is smaller than LwIP's
+        // MEMP_NUM_TCP_PCB(_LISTEN) in lwipopts.h.
         let netif = NetIf::add(
             Ipv4Addr::new(0, 0, 0, 0),
             Ipv4Addr::new(0, 0, 0, 0),
