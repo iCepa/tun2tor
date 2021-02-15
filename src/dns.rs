@@ -41,7 +41,8 @@ impl DnsResolver for DnsPortResolver {
         let socket = UdpSocket::bind(&bind, handle).unwrap();
         Box::new(socket.send_dgram(packet.into_data(), addr).and_then(
             move |(socket, _buf)| {
-                let buf = vec![0; 2048]; // TODO: MTU
+                let buf = vec![0; 2048]; // FIXME(ahf) on 15/02/2020: MTU isn't really an issue
+                                         // here. The buffer size is fine because we only work on localhost.
                 socket.recv_dgram(buf).and_then(
                     move |(_socket, buf, len, from)| {
                         if from != addr {
