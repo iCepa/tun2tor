@@ -56,6 +56,8 @@ impl Pbuf for Box<[u8]> {
         let mut buf = vec![0; (&mut *pbuf).tot_len as usize];
         let len =
             pbuf_copy_partial(pbuf, buf.as_mut_ptr() as *mut c_void, buf.len() as u16, 0) as usize;
+
+        // FIXME(ahf): We seem to never hit the right size here? Do we really need to truncate?
         buf.truncate(len);
         buf.into_boxed_slice()
     }
