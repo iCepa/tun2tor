@@ -43,3 +43,4 @@ $ dig @8.8.8.8 facebookcorewwwi.onion
   side-by-side.
 - How could we pre-rebase of lwip build without ARP support? That makes no sense.
 - Remember to update RunThread.swift from iCepa such that it runs `tun2tor_run(packetFlow.value(forKeyPath: "socket.fileDescriptor") as! Int32, 12345 as! Int32, 9050 as! Int32)`.
+- Talk with Benjamin about moving to `async` for Tokio code (and bump Tokio version).
