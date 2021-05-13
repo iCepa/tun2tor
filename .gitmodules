@@ -1,3 +1,7 @@
 [submodule "lwip/lwip-contrib"]
 	path = lwip/lwip-contrib
 	url = git://git.savannah.nongnu.org/lwip/lwip-contrib.git
+[submodule "lwip/lwip"]
+	path = lwip/lwip
+	url = https://github.com/ahf/lwip.git
+	branch = ahf-gp-memory-v4
