@@ -20,6 +20,13 @@ impl ip_addr_t {
             _ => None
         }
     }
+
+    pub fn localhost() -> ip_addr_t {
+        ip_addr_t {
+            addr: ip6_addr_t { addr: [0, 0, 0, 1] },
+            version: IPADDR_TYPE_V6
+        }
+    }
 }
 
 impl From<IpAddr> for ip_addr_t {

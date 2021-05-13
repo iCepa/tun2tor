@@ -116,7 +116,7 @@ impl Stream for DnsStack {
                     continue;
                 }
             };
-            self.futures.swap_remove(idx);
+            let _unused = self.futures.swap_remove(idx);
             return result;
         }
     }
