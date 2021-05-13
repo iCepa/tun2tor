@@ -8,10 +8,14 @@ fn main() {
         config.define("LWIP_DEBUG", Some("1"));
     }
 
-    config.file("lwip/src/core/def.c")
+    config
+        .file("lwip/src/api/err.c")
+        .file("lwip/src/api/tcpip.c")
+        .file("lwip/src/core/def.c")
         .file("lwip/src/core/inet_chksum.c")
         .file("lwip/src/core/init.c")
         .file("lwip/src/core/ip.c")
+        .file("lwip/src/core/ipv4/etharp.c")
         .file("lwip/src/core/ipv4/ip4.c")
         .file("lwip/src/core/ipv4/ip4_addr.c")
         .file("lwip/src/core/ipv4/ip4_frag.c")
@@ -24,12 +28,13 @@ fn main() {
         .file("lwip/src/core/memp.c")
         .file("lwip/src/core/netif.c")
         .file("lwip/src/core/pbuf.c")
+        .file("lwip/src/core/raw.c")
         .file("lwip/src/core/stats.c")
         .file("lwip/src/core/tcp.c")
         .file("lwip/src/core/tcp_in.c")
         .file("lwip/src/core/tcp_out.c")
         .file("lwip/src/core/timeouts.c")
-        .file("lwip/src/api/err.c")
+        .file("lwip/src/netif/ethernet.c")
         .file("lwip-contrib/ports/unix/port/perf.c")
         .file("lwip-contrib/ports/unix/port/sys_arch.c")
         .include(".")
