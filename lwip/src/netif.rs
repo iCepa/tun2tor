@@ -1,7 +1,6 @@
 use std::io;
 use std::net::{IpAddr, Ipv4Addr};
 use std::os::raw::{c_void, c_char};
-use std::mem;
 use std::collections::VecDeque;
 
 use futures::{Stream, Sink, Poll, Async, AsyncSink, StartSend};
@@ -10,6 +9,7 @@ use futures::task::{self, Task};
 use addr::{ip_addr_t, ip4_addr_t, ip6_addr_t};
 use error::{err_t};
 use pbuf::{pbuf, Pbuf};
+use std::ptr::null_mut;
 
 fn netif_common_output(netif: *mut netif, p: *mut pbuf, ipaddr: IpAddr) -> err_t {
     unsafe {
@@ -40,6 +40,14 @@ extern "C" fn netif_init(netif: *mut netif) -> err_t {
     err_t::ERR_OK
 }
 
+unsafe extern "C" fn input_noop(_var1: *mut pbuf, _var2: *mut netif) -> err_t {
+    err_t::ERR_OK
+}
+
+extern "C" fn linkoutput_noop(_var1: *mut netif, _var2: *mut pbuf) -> err_t {
+    err_t::ERR_OK
+}
+
 #[derive(Debug)]
 pub struct NetIf {
     inner: netif,
@@ -50,9 +58,28 @@ pub struct NetIf {
 impl NetIf {
     pub fn add(addr: Ipv4Addr, netmask: Ipv4Addr, gw: Ipv4Addr) -> Box<NetIf> {
         ::lwip_init();
-        let inner = unsafe {
-            mem::zeroed()
+
+        let inner = netif {
+            next: null_mut(),
+            ip_addr: ip_addr_t::localhost(),
+            netmask: ip_addr_t::localhost(),
+            gw: ip_addr_t::localhost(),
+            ip6_addr: [ip_addr_t::localhost(), ip_addr_t::localhost(), ip_addr_t::localhost()],
+            ip6_addr_state: [0, 0, 0],
+            input: input_noop,
+            output: netif_output,
+            linkoutput: linkoutput_noop,
+            output_ip6: netif_output_ip6,
+            state: null_mut(),
+            ip6_autoconfig_enabled: 0,
+            mtu: 0,
+            hwaddr_len: 0,
+            hwaddr: [0, 0, 0, 0, 0, 0],
+            flags: 0,
+            name: [0, 0],
+            num: 0
         };
+
         let mut netif = Box::new(NetIf { inner: inner, read_task: None, queue: VecDeque::new() });
         let (addr, netmask, gw) = (ip4_addr_t::from(addr), ip4_addr_t::from(netmask), ip4_addr_t::from(gw));
         unsafe { netif_add(&mut netif.inner, &addr, &netmask, &gw, netif.as_mut() as *mut NetIf as *mut _, netif_init, netif_input); }
