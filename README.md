@@ -34,6 +34,41 @@ $ sudo route add 8.8.8.8 172.30.20.1
 $ dig @8.8.8.8 facebookcorewwwi.onion
 ```
 
+
+## Compiling for iOS
+
+```bash
+# If you use Homebrew:
+$ brew install rustup
+# (Note: Rust via brew can't give you the iOS targets! So do use Rustup!)
+
+# If not: (See https://rustup.rs)
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Add cross-compile targets for iOS:
+$ rustup target add aarch64-apple-ios x86_64-apple-ios
+
+# Install cargo-lipo to create universal binaries:
+$ cargo install cargo-lipo
+
+# Compile:
+$ cargo lipo
+
+# The binary can be found in target/universal/
+```
+
+## Creating a header file
+
+(Noted here for reference, in case you extend `tun2tor`.)
+
+```bash
+# Install header generator tool.
+$ cargo install cbindgen
+
+# Generate:
+$ cbindgen --cpp-compat --crate tun2tor --lang C --output tun2tor.h
+```
+
 ## Notes from/to Alex
 
 - You need to pull in your own LWIP git checkout in the lwip directory of the root of the repository.
