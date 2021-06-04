@@ -27,10 +27,8 @@ impl Bytes {
             })
             .map_err(|b| {
                 Bytes {
+                    off, len, cap,
                     bytes: b,
-                    off: off,
-                    len: len,
-                    cap: cap,
                 }
             })
     }
@@ -38,9 +36,9 @@ impl Bytes {
     pub fn new(bytes: Box<[u8]>) -> Bytes {
         let len = bytes.len();
         Bytes {
+            len,
             bytes: Rc::new(RefCell::new(bytes)),
             off: 0,
-            len: len,
             cap: len,
         }
     }

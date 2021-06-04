@@ -86,7 +86,7 @@ impl Tun {
             0,
         ));
         try_nix!(connect(fd, &ctrl_addr));
-        Ok(Tun { fd: fd })
+        Ok(Tun { fd })
     }
 
     pub fn ifname(&self) -> io::Result<String> {
@@ -115,7 +115,7 @@ impl Tun {
 
 impl FromRawFd for Tun {
     unsafe fn from_raw_fd(fd: RawFd) -> Tun {
-        Tun { fd: fd }
+        Tun { fd }
     }
 }
 

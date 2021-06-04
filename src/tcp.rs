@@ -45,7 +45,7 @@ impl TcpStack {
         });
 
         TcpStack {
-            netif: netif,
+            netif,
             backends: Box::new(backends),
         }
     }
