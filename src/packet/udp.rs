@@ -1,10 +1,10 @@
+use crate::packet::bytes::{Bytes, Checksum};
+use crate::packet::ip::IpHeader;
+
 use std::fmt;
 use std::io;
 
 use byteorder::NetworkEndian;
-
-use packet::bytes::{Bytes, Checksum};
-use packet::ip::IpHeader;
 
 pub struct UdpHeader(Bytes);
 

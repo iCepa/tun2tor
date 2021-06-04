@@ -1,3 +1,5 @@
+use crate::tcp::TcpBackend;
+
 use std::io;
 use std::net::{SocketAddr, IpAddr};
 
@@ -6,8 +8,6 @@ use futures::{Future, IntoFuture};
 use tokio_io::io::{read_exact, write_all};
 use tokio_core::net::TcpStream;
 use tokio_core::reactor::Handle;
-
-use tcp::TcpBackend;
 
 const SOCKS5_VERSION: u8 = 0x05;
 const SOCKS5_AUTH_METHOD_NONE: u8 = 0x00;

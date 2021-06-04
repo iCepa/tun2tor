@@ -3,6 +3,7 @@ name = "lwip"
 version = "2.1.1"
 authors = ["Conrad Kramer <conrad@kramerapps.com>", "Benjamin Erhart <berhart@netzarchitekten.com>"]
 build = "build.rs"
+edition = "2018"
 
 [dependencies]
 byteorder = "1.2"

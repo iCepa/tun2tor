@@ -1,12 +1,13 @@
+use crate::io::transfer;
+use lwip::netif::NetIf;
+use lwip::tcp::{TcpListener, EventedTcpStream};
+
 use std::io;
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 use futures::{self, Future, Stream, Sink, Poll, StartSend};
-use lwip::{NetIf, TcpListener, EventedTcpStream};
 use tokio_core::net::TcpStream;
 use tokio_core::reactor::Handle;
-
-use io::transfer;
 
 pub trait TcpBackend {
     fn build(

@@ -1,17 +1,10 @@
 #![allow(non_camel_case_types)]
 
-extern crate byteorder;
-extern crate futures;
-extern crate tokio_core;
-
 mod error;
 mod addr;
 mod pbuf;
-mod netif;
-mod tcp;
-
-pub use netif::NetIf;
-pub use tcp::{TcpListener, TcpStream, EventedTcpStream};
+pub mod netif;
+pub mod tcp;
 
 fn lwip_init() {
     use std::sync::Once;

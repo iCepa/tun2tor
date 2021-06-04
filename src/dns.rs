@@ -1,11 +1,11 @@
+use crate::packet::{IpPacket, UdpPacketBuilder};
+
 use std::io;
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 use futures::{Future, Stream, Sink, StartSend, Poll, Async, AsyncSink};
 use tokio_core::net::UdpSocket;
 use tokio_core::reactor::Handle;
-
-use packet::{IpPacket, UdpPacketBuilder};
 
 pub trait DnsResolver {
     fn resolve(

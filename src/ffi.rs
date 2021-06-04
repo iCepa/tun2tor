@@ -1,11 +1,12 @@
+use crate::io::stream_transfer;
+use crate::tun::platform;
+
 use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 use std::os::raw::c_int;
 use std::os::unix::io::FromRawFd;
 use tokio_core::reactor::Core;
 
 use super::{DnsTcpStack, DnsPortResolver, Tun, SocksBackend};
-use tun::platform;
-use io::stream_transfer;
 
 #[no_mangle]
 pub unsafe extern "C" fn tun2tor_run(fd: c_int, resolver_port: c_int, socks_port: c_int) {

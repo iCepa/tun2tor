@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::packet::bytes::{self, Bytes, Checksum};
+
 use std::fmt;
 use std::io::{self, Read, Write};
 use std::iter;
@@ -8,8 +10,6 @@ use std::net::{Ipv4Addr, Ipv6Addr, IpAddr};
 use std::vec;
 
 use byteorder::NetworkEndian;
-
-use packet::bytes::{self, Bytes, Checksum};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum IpProto {

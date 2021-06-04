@@ -1,7 +1,7 @@
+use crate::error::err_t;
+
 use std::io;
 use std::os::raw::c_void;
-
-use error::err_t;
 
 #[repr(i32)]
 #[allow(dead_code)]

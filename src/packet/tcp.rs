@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 
+use crate::packet::bytes::{Bytes, Checksum};
+use crate::packet::IpHeader;
+
 use std::fmt;
 use std::io;
 
 use byteorder::NetworkEndian;
-
-use packet::bytes::{Bytes, Checksum};
-use packet::ip::IpHeader;
 
 pub struct TcpHeader(Bytes);
 

@@ -1,7 +1,11 @@
 [package]
 name = "tun2tor"
-version = "0.1.0"
-authors = ["Conrad Kramer <conrad@kramerapps.com>"]
+version = "0.1.1"
+authors = [
+    "Conrad Kramer <conrad@kramerapps.com>",
+    "Alexander Færøy <ahf@torproject.org>",
+    "Benjamin Erhart <berhart@netzarchitekten.com>"]
+edition = "2018"
 
 [lib]
 crate-type = ["lib", "staticlib"]
