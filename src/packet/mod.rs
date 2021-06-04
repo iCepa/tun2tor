@@ -88,11 +88,9 @@ impl IpPacket {
                     return match UdpHeader::with_bytes(remaining) {
                         Ok((udp_hdr, data)) => {
                             Ok(IpPacket {
+                                exts, data, bytes,
                                 fixed: ip_hdr,
-                                exts: exts,
                                 payload: Payload::Udp(udp_hdr),
-                                data: data,
-                                bytes: bytes,
                             })
                         }
                         Err(e) => Err(e),
@@ -102,11 +100,9 @@ impl IpPacket {
                     return match TcpHeader::with_bytes(remaining) {
                         Ok((tcp_hdr, data)) => {
                             Ok(IpPacket {
+                                exts, data, bytes,
                                 fixed: ip_hdr,
-                                exts: exts,
                                 payload: Payload::Tcp(tcp_hdr),
-                                data: data,
-                                bytes: bytes,
                             })
                         }
                         Err(e) => Err(e),
@@ -121,11 +117,10 @@ impl IpPacket {
                         }
                         Err(ref e) if e.kind() == io::ErrorKind::InvalidData => {
                             return Ok(IpPacket {
+                                exts, bytes,
                                 fixed: ip_hdr,
-                                exts: exts,
                                 payload: Payload::Unknown(p),
                                 data: remaining,
-                                bytes: bytes,
                             })
                         }
                         Err(e) => return Err(e),
@@ -248,11 +243,10 @@ impl<'a> UdpPacketBuilder<'a> {
         remaining.as_mut().clone_from_slice(data);
 
         let mut packet = IpPacket {
-            fixed: fixed,
+            fixed, bytes,
             exts: Vec::new(),
             payload: Payload::Udp(udp),
             data: remaining,
-            bytes: bytes,
         };
 
         packet.calculate_checksum();

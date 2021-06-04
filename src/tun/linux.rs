@@ -32,7 +32,7 @@ impl Tun {
 
         ioctl!(set_iff with iow!(IOC_TUN_MAGIC, TUN_SET_IFF, 4));
         unsafe { set_iff(fd, &mut ifreq as *mut _ as *mut u8)? };
-        Ok(Tun { fd: fd })
+        Ok(Tun { fd })
     }
 
     pub fn ifname(&self) -> io::Result<String> {
@@ -52,7 +52,7 @@ impl Tun {
 
 impl FromRawFd for Tun {
     unsafe fn from_raw_fd(fd: RawFd) -> Tun {
-        Tun { fd: fd }
+        Tun { fd }
     }
 }
 
