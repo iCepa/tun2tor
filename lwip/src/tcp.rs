@@ -1,3 +1,8 @@
+use crate::addr::ip_addr_t;
+use crate::error::err_t;
+use crate::pbuf::{pbuf, pbuf_chain, pbuf_dechain, pbuf_free, pbuf_header};
+use crate::lwip_init;
+
 use std::collections::VecDeque;
 use std::io::{self, Read, Write};
 use std::net::SocketAddr;
@@ -7,16 +12,12 @@ use std::ptr;
 use futures::{Stream, Poll, Async};
 use futures::task::{self, Task};
 
-use addr::ip_addr_t;
-use error::err_t;
-use pbuf::{pbuf, pbuf_chain, pbuf_dechain, pbuf_free, pbuf_header};
-
 #[derive(Debug)]
 struct TcpPcb(*mut tcp_pcb);
 
 impl TcpPcb {
     fn new() -> TcpPcb {
-        ::lwip_init();
+        lwip_init();
         TcpPcb(unsafe { tcp_new() })
     }
 

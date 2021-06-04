@@ -1,15 +1,16 @@
+use crate::addr::{ip_addr_t, ip4_addr_t, ip6_addr_t};
+use crate::error::{err_t};
+use crate::pbuf::{pbuf, Pbuf};
+use crate::lwip_init;
+
+use std::collections::VecDeque;
 use std::io;
 use std::net::{IpAddr, Ipv4Addr};
 use std::os::raw::{c_void, c_char};
-use std::collections::VecDeque;
+use std::ptr::null_mut;
 
 use futures::{Stream, Sink, Poll, Async, AsyncSink, StartSend};
 use futures::task::{self, Task};
-
-use addr::{ip_addr_t, ip4_addr_t, ip6_addr_t};
-use error::{err_t};
-use pbuf::{pbuf, Pbuf};
-use std::ptr::null_mut;
 
 fn netif_common_output(netif: *mut netif, p: *mut pbuf, ipaddr: IpAddr) -> err_t {
     unsafe {
@@ -57,7 +58,7 @@ pub struct NetIf {
 
 impl NetIf {
     pub fn add(addr: Ipv4Addr, netmask: Ipv4Addr, gw: Ipv4Addr) -> Box<NetIf> {
-        ::lwip_init();
+        lwip_init();
 
         let inner = netif {
             next: null_mut(),
