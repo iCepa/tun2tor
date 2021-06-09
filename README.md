@@ -18,11 +18,12 @@ Running `tun2tor` as a standalone utility is primarily useful for debugging at t
 $ git clone --recursive https://github.com/iCepa/tun2tor.git
 $ cd tun2tor
 $ cargo build
-$ sudo target/debug/tun2tor
+$ sudo RUST_BACKTRACE=1 target/debug/tun2tor
 ```
 
 ```bash
-$ tor --DnsPort 12345
+$ brew install tor
+$ tor --DNSPort 12345 --AutomapHostsOnResolve 1
 ```
 
 Running it requires root privileges in order to create a `utun` interface. `tun2tor` is currently hardcoded in [`main.rs`](https://github.com/iCepa/tun2tor/blob/master/src/main.rs) to create an interface with an IP address of `172.30.20.1`, look for a SOCKS proxy at `127.0.0.1:9050`, and look for a DNS server at `127.0.0.1:12345`.
@@ -30,8 +31,13 @@ Running it requires root privileges in order to create a `utun` interface. `tun2
 In order to route traffic through the interface, you need to modify the route table:
 
 ```bash
+// Test DNS:
 $ sudo route add 8.8.8.8 172.30.20.1
 $ dig @8.8.8.8 facebookcorewwwi.onion
+
+// Test data:
+$ sudo route add 116.202.120.181 172.30.20.1 // check.torproject.org
+$ wget check.torproject.org
 ```
 
 
