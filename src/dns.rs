@@ -48,7 +48,7 @@ impl DnsResolver for DnsPortResolver {
                         if from != addr {
                             return Err(io::Error::new(
                                 io::ErrorKind::Other,
-                                "invalid DNS reply addess",
+                                "invalid DNS reply address",
                             ));
                         }
                         let response = UdpPacketBuilder::new()
